@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <title>React Monaco Visualizer - start</title>
+    <script src="./build/monaco-tree.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      const { React, ReactDOM, Bootstrap } = MonacoTree;
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      const el = React.createElement(
+        "div",
+        null,
+        React.createElement("p", null, "hello React"),
+        React.createElement(
+          Bootstrap.Button,
+          {
+            as: "a",
+            variant: "success",
+            onClick: () => {
+              console.log("you click me");
+            },
+          },
+          "hello Bootstrap"
+        )
+      );
+      root.render(el);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,45 @@
+.coverage-button {
+    box-sizing: border-box;
+    display: flex;
+    /* width: 100%; */
+    padding: 4px;
+    border-radius: 2px;
+    text-align: center;
+    cursor: pointer;
+    justify-content: center;
+    align-items: center;
+    background-color: #228fd8d3;
+}
+
+.coverage-select {
+    background-color: #3C3C3C;
+    color: #F0F0F0;
+    border-color: #3C3C3C;
+}
+
+.coverage-input {
+    position: relative;
+    display: block;
+    padding: 0;
+    box-sizing: border-box;
+
+    background-color: #3C3C3C;
+    color: #CCCCCC;
+
+    /* Customizable */
+    font-size: inherit;
+}
+
+.coverage-input .error {
+    background-color: #5A1D1D;
+    border-color: #BE1100;
+}
+
+/* inputBackground: Color.fromHex('#3C3C3C'),
+inputForeground: Color.fromHex('#CCCCCC'),
+inputValidationInfoBorder: Color.fromHex('#55AAFF'),
+inputValidationInfoBackground: Color.fromHex('#063B49'),
+inputValidationWarningBorder: Color.fromHex('#B89500'),
+inputValidationWarningBackground: Color.fromHex('#352A05'),
+inputValidationErrorBorder: Color.fromHex('#BE1100'),
+inputValidationErrorBackground: Color.fromHex('#5A1D1D') */

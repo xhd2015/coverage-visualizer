@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>React Monaco Visualizer - start</title>
+    <script src="./build/monaco-tree.js"></script>
+  </head>
+  <body
+    style="
+      min-height: 100%;
+      margin-top: 0;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+    "
+  >
+    <div id="root" style="flex-grow: 1"></div>
+    <script>
+      const { React, ReactDOM, Coverage } = MonacoTree;
+
+      // wrap in onload, because we put coverageData in later script...script
+      // if we use remote loader, we do not need this wrapper
+      window.onload = function () {
+        // coverage
+        const coverageFileList = new Coverage.coverage.CoverageProfileFiles(
+          coverageData
+        );
+        const fileDetailGetter = new Coverage.file.LocalFileDetailGetter({
+          "main.go": { content: mainFile },
+          "util/util.go": { content: utilFile },
+        });
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        const el = React.createElement(Coverage.CoverageVisualizerFilter, {
+          fileList: coverageFileList, // fileList needs to implement
+          fileDetailGetter: fileDetailGetter, // fileDetailGetter needs to implement
+        });
+        root.render(el);
+      };
+    </script>
+
+    <script>
+      var coverageData = {
+        modPath: "github.com/xhd2015/coverage-demo",
+        pkgs: {
+          "github.com/xhd2015/coverage-demo": {
+            name: "main",
+            fileMapping: {
+              "main.go": {
+                "": {
+                  range: null,
+                  labels: null,
+                  blocks: [
+                    {
+                      startLine: 20,
+                      startCol: 131085,
+                      endLine: 22,
+                      endCol: 2,
+                      count: { "": 1 },
+                    },
+                    {
+                      startLine: 24,
+                      startCol: 1769528,
+                      endLine: 26,
+                      endCol: 27,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 30,
+                      startCol: 983042,
+                      endLine: 31,
+                      endCol: 15,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 37,
+                      startCol: 1179650,
+                      endLine: 37,
+                      endCol: 18,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 26,
+                      startCol: 196635,
+                      endLine: 28,
+                      endCol: 3,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 31,
+                      startCol: 196623,
+                      endLine: 35,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 41,
+                      startCol: 131133,
+                      endLine: 43,
+                      endCol: 2,
+                      count: { "": 1, rc: 1 },
+                    },
+                    {
+                      startLine: 46,
+                      startCol: 131133,
+                      endLine: 48,
+                      endCol: 2,
+                      count: { "": 1, rc: 1 },
+                    },
+                    {
+                      startLine: 51,
+                      startCol: 131133,
+                      endLine: 53,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 56,
+                      startCol: 131141,
+                      endLine: 58,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 84,
+                      startCol: 1572901,
+                      endLine: 85,
+                      endCol: 24,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 88,
+                      startCol: 1048578,
+                      endLine: 89,
+                      endCol: 16,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 92,
+                      startCol: 1048578,
+                      endLine: 93,
+                      endCol: 16,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 98,
+                      startCol: 1835010,
+                      endLine: 98,
+                      endCol: 28,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 85,
+                      startCol: 196632,
+                      endLine: 87,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 89,
+                      startCol: 196624,
+                      endLine: 91,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 93,
+                      startCol: 196624,
+                      endLine: 96,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                  ],
+                },
+                coveredOnlyByNonRC: {
+                  range: {
+                    startLine: 61,
+                    startCol: 1,
+                    endLine: 64,
+                    endCol: 2,
+                  },
+                  labels: ["rc"],
+                  blocks: [
+                    {
+                      startLine: 61,
+                      startCol: 131143,
+                      endLine: 64,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                  ],
+                },
+                multiple: {
+                  range: {
+                    startLine: 67,
+                    startCol: 1,
+                    endLine: 81,
+                    endCol: 2,
+                  },
+                  labels: ["rc"],
+                  blocks: [
+                    {
+                      startLine: 67,
+                      startCol: 1572899,
+                      endLine: 68,
+                      endCol: 24,
+                      count: { "": 1, rc: 1 },
+                    },
+                    {
+                      startLine: 71,
+                      startCol: 1048578,
+                      endLine: 72,
+                      endCol: 16,
+                      count: { "": 2, rc: 2 },
+                    },
+                    {
+                      startLine: 75,
+                      startCol: 1048578,
+                      endLine: 76,
+                      endCol: 16,
+                      count: { "": 2, rc: 2 },
+                    },
+                    {
+                      startLine: 79,
+                      startCol: 917506,
+                      endLine: 80,
+                      endCol: 14,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 68,
+                      startCol: 196632,
+                      endLine: 70,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 72,
+                      startCol: 196624,
+                      endLine: 74,
+                      endCol: 3,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 76,
+                      startCol: 196624,
+                      endLine: 78,
+                      endCol: 3,
+                      count: { "": 2, rc: 2 },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+          "github.com/xhd2015/coverage-demo/util": {
+            name: "util",
+            fileMapping: {
+              "util.go": {
+                "": {
+                  range: null,
+                  labels: null,
+                  blocks: [
+                    {
+                      startLine: 10,
+                      startCol: 4522067,
+                      endLine: 11,
+                      endCol: 69,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 41,
+                      startCol: 2949122,
+                      endLine: 41,
+                      endCol: 45,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 11,
+                      startCol: 2293829,
+                      endLine: 13,
+                      endCol: 35,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 20,
+                      startCol: 1114115,
+                      endLine: 22,
+                      endCol: 17,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 33,
+                      startCol: 1114115,
+                      endLine: 34,
+                      endCol: 17,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 39,
+                      startCol: 1114115,
+                      endLine: 39,
+                      endCol: 17,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 13,
+                      startCol: 1179683,
+                      endLine: 14,
+                      endCol: 18,
+                      count: { "": 8 },
+                    },
+                    {
+                      startLine: 14,
+                      startCol: 327698,
+                      endLine: 16,
+                      endCol: 5,
+                      count: { "": 8 },
+                    },
+                    {
+                      startLine: 16,
+                      startCol: 327690,
+                      endLine: 18,
+                      endCol: 5,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 22,
+                      startCol: 262161,
+                      endLine: 27,
+                      endCol: 4,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 27,
+                      startCol: 262153,
+                      endLine: 32,
+                      endCol: 4,
+                      count: { "": 2 },
+                    },
+                    {
+                      startLine: 34,
+                      startCol: 262161,
+                      endLine: 38,
+                      endCol: 4,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 44,
+                      startCol: 131111,
+                      endLine: 47,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 49,
+                      startCol: 131123,
+                      endLine: 56,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 58,
+                      startCol: 131125,
+                      endLine: 63,
+                      endCol: 2,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 65,
+                      startCol: 1048598,
+                      endLine: 66,
+                      endCol: 16,
+                      count: { "": 0 },
+                    },
+                    {
+                      startLine: 66,
+                      startCol: 851984,
+                      endLine: 67,
+                      endCol: 13,
+                      count: { "": 0 },
+                    },
+                  ],
+                },
+              },
+            },
+          },
+        },
+      };
+    </script>
+
+    <script>
+      var mainFile = `package main
+
+import (
+	"errors"
+	"fmt"
+	"strconv"
+
+	"github.com/xhd2015/coverage-demo/util"
+	"github.com/xhd2015/coverage-demo-support/tls"
+)
+
+var m = map[string]func(param map[string]string) (interface{}, error){
+	"covByOld":           covByOld,
+	"covByNew":           covByNew,
+	"addByNew":           addByNew,
+	"notCoveredByBoth":   notCoveredByBoth,
+	"coveredOnlyByNonRC": coveredOnlyByNonRC,
+}
+
+func main() {
+	util.RunServer("/api/run/v2", run)
+}
+
+func run(param map[string]string) (interface{}, error) {
+	// set RC flag
+	if param["rc"] == "true" {
+		tls.SetLabels([]string{"rc"})
+	}
+	// fmt.Printf("new: func=%v, rc set?%v, tls set?%v\n", param["func"], param["rc"] == "true", tls.IsRC())
+	fn := m[param["func"]]
+	if fn == nil {
+		// refactored to quick return
+		// return fn(param)
+		return nil, errors.New("not found")
+	}
+	// return nil, errors.New("not found")
+	return fn(param)
+}
+
+// covByOld only covered by old
+func covByOld(param map[string]string) (interface{}, error) {
+	return multiple(param["A"], param["B"]), nil
+}
+
+// covByNew only covered by new
+func covByNew(param map[string]string) (interface{}, error) {
+	return multiple(param["A"], param["B"]), nil
+}
+
+// addByNew added by new
+func addByNew(param map[string]string) (interface{}, error) {
+	return multiple(param["A"], param["B"]), nil
+}
+
+// notCoveredByBoth not covered
+func notCoveredByBoth(param map[string]string) (interface{}, error) {
+	return multiple(param["A"], param["B"]), nil
+}
+
+// coveredOnlyByNonRC not covered
+func coveredOnlyByNonRC(param map[string]string) (interface{}, error) {
+	// check keyword_pmt
+	return multiple(param["A"], param["B"]), nil
+}
+
+// multiple
+func multiple(a, b string) string {
+	if a == "" || b == "" {
+		return "NaN"
+	}
+	fa, err := strconv.ParseFloat(a, 64)
+	if err != nil {
+		return "NaN"
+	}
+	fb, err := strconv.ParseFloat(b, 64)
+	if err == nil {
+		return fmt.Sprint(fa * fb)
+	}
+	fmt.Printf("b is invalid")
+	return "NaN" //hah?
+}
+
+// multiple
+func multipleV2(a, b string) string {
+	if a == "" || b == "" {
+		return "NaN"
+	}
+	fa, err := strconv.ParseFloat(a, 64)
+	if err != nil {
+		return "NaN"
+	}
+	fb, err := strconv.ParseFloat(b, 64)
+	if err == nil {
+		fmt.Printf("b is invalid")
+		return "NaN" //hah?
+	}
+
+	return fmt.Sprint(fa * fb)
+}    
+`;
+    </script>
+    <script>
+      var utilFile = `package util
+
+import (
+	"encoding/json"
+	"net/http"
+	"os"
+	"os/exec"
+)
+
+func RunServer(path string, h func(param map[string]string) (interface{}, error)) {
+	http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+		m := make(map[string]string)
+		for k, v := range r.URL.Query() {
+			if len(v) > 0 {
+				m[k] = v[len(v)-1]
+			} else {
+				m[k] = ""
+			}
+		}
+		var res interface{}
+		v, err := h(m)
+		if err != nil {
+			res = map[string]interface{}{
+				"code": 1,
+				"msg":  err.Error(),
+			}
+		} else {
+			res = map[string]interface{}{
+				"code": 0,
+				"data": v,
+			}
+		}
+		bytes, err := json.Marshal(res)
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("error:" + err.Error()))
+			return
+		}
+		w.Write(bytes)
+	})
+	http.ListenAndServe(os.Getenv("ADDR"), nil)
+}
+
+func Run(cmd2 string, args ...string) {
+	cmd := Start(cmd2, args...)
+	Must(cmd.Wait())
+}
+
+func Start(cmd2 string, args ...string) *exec.Cmd {
+	cmd := exec.Command(cmd2, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	Must(cmd.Start())
+	return cmd
+}
+
+func Command(cmd2 string, args ...string) *exec.Cmd {
+	cmd := exec.Command(cmd2, args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd
+}
+
+func Must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+`;
+    </script>
+  </body>
+</html>

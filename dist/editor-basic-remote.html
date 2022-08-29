@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>React Monaco Visualizer - start</title>
+    <script src="./build/monaco-tree.js"></script>
+  </head>
+  <body
+    style="
+      min-height: 100%;
+      margin-top: 0;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+    "
+  >
+    <div id="root" style="flex-grow: 1"></div>
+    <script>
+      const { React, ReactDOM, Coverage } = MonacoTree;
+      const repoURI = "file:///path/to/local/github.com/xhd2015/coverage-demo"; // point this to your coverage demo repo
+
+      //  file
+      const coverageFileList = new Coverage.coverage.CoverageProfileFiles({
+        async get() {
+          return fetch(
+            "http://localhost:9000//labelResult?id=1" // whatever can return a coverage
+          )
+            .then((res) => res.json())
+            .then((res) => res.data);
+        },
+      });
+
+      const gitFileDetailGetter = new Coverage.file.RemoteFileDetailGetter(
+        "http://localhost:9000/getFile", // whatever can return file detail
+        repoURI,
+        {
+          request(params) {
+            params.repoURI = params.dir;
+            params.commitID = "master";
+            delete params.dir;
+          },
+          response(resp) {
+            return resp.data;
+          },
+        }
+      );
+
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      const el = React.createElement(Coverage.CoverageVisualizerFilter, {
+        fileList: coverageFileList,
+        fileDetailGetter: gitFileDetailGetter,
+      });
+      root.render(el);
+    </script>
+  </body>
+</html>
