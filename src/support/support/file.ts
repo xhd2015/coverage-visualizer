@@ -22,6 +22,7 @@ export interface FileTreeGetter {
 
 // file scope statistics
 export interface FileTree extends FileTreeGetter {
+    reload(): Promise<any>
     // prepare data
     refresh: (label: string) => Promise<any>
 

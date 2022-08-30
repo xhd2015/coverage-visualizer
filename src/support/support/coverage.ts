@@ -117,7 +117,11 @@ export class CoverageProfileFiles implements FileTree {
         return this.covProfile instanceof Promised ? this.covProfile.value : Promise.resolve(this.covProfile)
     }
 
-
+    async reload(): Promise<any> {
+        if (this.covProfile instanceof Promised) {
+            this.covProfile.reset()
+        }
+    }
     async refresh(label: string): Promise<any> {
         const profile = await this._profile
         const labels = {}

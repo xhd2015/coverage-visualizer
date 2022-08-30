@@ -10,6 +10,18 @@ const port = process.env.PORT || 8000;
 app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
+// cros, must be placed before routes
+app.use(function (req, res, next) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+
+  // NOTE: must call next()
+  next();
+});
+
+// serve static files
+app.use("/dist", express.static("dist"));
+
 // options
 app.options("/", (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -131,8 +143,8 @@ app.get("/api/listAllFile", function (req, res, next) {
     excludeFileName,
   })
     .then((data) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Headers", "*");
+      // res.setHeader("Access-Control-Allow-Origin", "*");
+      // res.setHeader("Access-Control-Allow-Headers", "*");
       res.json({ data });
     })
     .catch(next);
@@ -153,18 +165,13 @@ app.get("/api/getFileDetail", function (req, res, next) {
   }
   getFileDetail(dir, file)
     .then((data) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
-      res.setHeader("Access-Control-Allow-Headers", "*");
+      // res.setHeader("Access-Control-Allow-Origin", "*");
+      // res.setHeader("Access-Control-Allow-Headers", "*");
       res.json({ data });
     })
     .catch(next);
 });
 
-// cros
-app.use(function (err, req, res, next) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "*");
-});
 // err handler
 app.use(function (err, req, res, next) {
   console.error("request err:", req.url, err.stack);
@@ -172,6 +179,7 @@ app.use(function (err, req, res, next) {
   res.setHeader("Content-Type", "text/plain");
   res.send(err.message);
 });
+
 server.listen(port, () => {
   console.log(`app listening at http://localhost:${port}`);
 });

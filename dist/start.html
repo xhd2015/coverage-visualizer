@@ -10,23 +10,12 @@
   <body>
     <div id="root"></div>
     <script>
-      const { React, ReactDOM, Bootstrap } = MonacoTree;
+      const { React, ReactDOM } = MonacoTree;
       const root = ReactDOM.createRoot(document.getElementById("root"));
       const el = React.createElement(
         "div",
-        null,
-        React.createElement("p", null, "hello React"),
-        React.createElement(
-          Bootstrap.Button,
-          {
-            as: "a",
-            variant: "success",
-            onClick: () => {
-              console.log("you click me");
-            },
-          },
-          "hello Bootstrap"
-        )
+        { style: { color: "black" } },
+        React.createElement("p", null, "hello React!")
       );
       root.render(el);
     </script>

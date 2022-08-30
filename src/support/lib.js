@@ -3,6 +3,7 @@ import TreeEditorDemo from "./components/TreeEditorDemo";
 import FileMapTreeEditorDemo from "./components/FileMapTreeEditorDemo";
 import CoverageVisualizer from "./components/CoverageVisualizer";
 import CoverageVisualizerFilter from "./components/CoverageVisualizerFilter";
+import CoverageVisualizerFilterPlayer from "./components/CoverageVisualizerFilterPlayer";
 import * as file from "./support/file";
 import * as coverage from "./support/coverage";
 
@@ -20,6 +21,7 @@ export {
   FileMapTreeEditorDemo,
   CoverageVisualizer,
   CoverageVisualizerFilter,
+  CoverageVisualizerFilterPlayer,
   file,
   coverage,
 };
