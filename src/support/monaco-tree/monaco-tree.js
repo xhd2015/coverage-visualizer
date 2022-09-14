@@ -18,21 +18,46 @@ class MonacoTree extends React.Component {
       }
     });
     // TODO: may bind this.onLayout?
-    document.addEventListener("layout", this.onLayout);
+    // document.addEventListener("layout", this.onLayout);
   }
 
   componentWillUnmount() {
-    document.removeEventListener("layout", this.onLayout);
+    // document.removeEventListener("layout", this.onLayout);
   }
 
   componentDidUpdate(prevProps) {
+    // console.log("didUpdate:", this.props.directory);
+    if (prevProps.treeConfig != this.props.treeConfig) {
+      this.ensureTree();
+    }
+    if (
+      prevProps.treeConfig != this.props.treeConfig ||
+      this.props.directory != prevProps.directory
+    ) {
+      this.tree.model.setInput(this.props.directory);
+    }
+    if (
+      prevProps.treeConfig != this.props.treeConfig ||
+      this.props.directory != prevProps.directory ||
+      this.props.onClickFile != prevProps.onClickFile
+    ) {
+      this.tree.model.onDidSelect((e) => {
+        if (e.selection.length) {
+          this.props.onClickFile(e.selection[0]);
+        }
+      });
+    }
     this.tree.model.refresh();
+    // this.tree.model.onDidSelect((e) => {
+    //   if (e.selection.length) {
+    //     this.props.onClickFile(e.selection[0]);
+    //   }
+    // });
 
     // if (this.state.directory !== prevProps.directory) {
     //   this.tree.model.setInput(prevProps.directory);
     //   this.setState({ directory: prevProps.directory });
     // } else {
-
     //   this.expandTree(this.tree);
     // }
   }
@@ -50,9 +75,8 @@ class MonacoTree extends React.Component {
     }
 
     const { treeConfig, getActions } = this.props;
-
-    (treeConfig.controller = createController(this, getActions, true)),
-      (this.tree = new Tree(this.container, treeConfig));
+    treeConfig.controller = createController(this, getActions, true);
+    this.tree = new Tree(this.container, treeConfig);
   }
 
   expandTree(tree) {

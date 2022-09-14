@@ -112,6 +112,25 @@ export class RemoteFileDetailGetter {
         return Promise.resolve(detail)
     }
 }
+export class FileDetailMemo {
+    get: (filename: string) => Promise<FileDetail | null>
+
+    fileContent: { [filename: string]: Promise<FileDetail | null> }
+    constructor(get: (filename: string) => Promise<FileDetail | null>) {
+        this.get = get
+        this.fileContent = {}
+    }
+
+    async getDetail(filename: string): Promise<FileDetail | null> {
+        let detail = this.fileContent[filename]
+        if (!detail) {
+            // console.log("calling get:", filename)
+            detail = this.get(filename)
+            this.fileContent[filename] = detail
+        }
+        return Promise.resolve(detail)
+    }
+}
 
 export class RemoteFileList {
     api: string
@@ -176,6 +195,25 @@ export class NodeTree<T> implements FileTreeGetter {
     }
 }
 
+export function traverseNode(node: ITreeNode, fn: (node: ITreeNode) => boolean, after?: (node: ITreeNode) => void) {
+    function doTraverseNode(node: ITreeNode): boolean {
+        if (!node) {
+            return
+        }
+        if (!fn(node)) {
+            return false
+        }
+        for (const ch of (node.children || [])) {
+            if (!doTraverseNode(ch)) {
+                return false
+            }
+        }
+        after?.(node)
+        return true
+    }
+    doTraverseNode(node)
+}
+
 export class NodeTreeBuilder<T> {
     name: string
     path: string
@@ -201,12 +239,12 @@ export class NodeTreeBuilder<T> {
     // as a special case: 
     //    x.navigate("") = x
     //    x.navigate("/") = x
-    navigate(dir: string): NodeTreeBuilder<T> {
-        const paths = dir.split("/").filter(e => !!e)
+    navigate(path: string): NodeTreeBuilder<T> {
+        const paths = path.split("/").filter(e => !!e)
         let node: NodeTreeBuilder<T> = this
         paths.forEach(e => {
             if (node.markedAsFile) {
-                throw new Error(`invalid navigation, ${node.path} of ${dir} already marked as a file,cannot navigate as a dir.`)
+                throw new Error(`invalid navigation, ${node.path} of ${path} already marked as a file,cannot navigate as a dir.`)
             }
             let child = node.childrenMapping[e]
             if (!child) {

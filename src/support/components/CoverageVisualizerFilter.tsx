@@ -250,7 +250,7 @@ export default class CoverageVisualizer extends React.Component<IProps, IState> 
   render() {
     const { color, ratioText } = renderPathDecoration(this.state.rootDecoration, 0.5)
 
-    return <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+    return <div style={{ height: "100%", display: "flex", flexDirection: "column" }} className="coverage-visualizer">
       <div
         style={{ color: "black", display: "flex", alignItems: "center" }}
       >

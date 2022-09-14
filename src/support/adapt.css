@@ -1,0 +1,14 @@
+/* 
+if you are using coverage-visualizer with bootstrap or other UI framework
+you may need to manually reset <a> back to their default style so it looks
+more naturally.
+*/
+.workspaceContainer a {
+    color: white;
+    text-decoration: unset;
+}
+
+.workspaceContainer a:hover {
+    color: white;
+    text-decoration: unset;
+}

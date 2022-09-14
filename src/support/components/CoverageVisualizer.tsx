@@ -1,4 +1,7 @@
-import React from "react";
+// CoverageVisualizer is not only a coverage visualizer, the coverage feature is opt-in.
+// you can also disable it to get a code viewer.
+
+import React, { useEffect, useState } from "react";
 import {
   MonacoTree,
   TreeDnD,
@@ -7,10 +10,13 @@ import {
 import MonacoEditor from "react-monaco-editor";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { FileDetailGetter, FileTree, ITreeNode } from "../support/file";
+import CodeTree, { Control, refreshTreeConfig as refreshCodeTreeConfig } from "./CodeTree";
 
 interface IProps {
   fileList: FileTree
   fileDetailGetter: FileDetailGetter
+  height?: string // default 400px
+  codeOnly?: boolean
 }
 
 interface IState {
@@ -35,232 +41,59 @@ interface FileOptions {
   exists: boolean
 }
 
-export default class CoverageVisualizer extends React.Component<IProps, IState> {
-  editorWrapper: MonacoEditor;
-  lastClickedTime: number;
-  lastClickedFile: any;
+export default function CoverageVisualizer(props: IProps) {
+  const [label, setLabel] = useState("")
+  const ctrl = {} as Control
 
-  fileModels: FileModels;
-
-  constructor(props: IProps) {
-    super(props);
-
-    this.state = {
-      rootDir: null,
-      treeConfig: null,
-      activeFile: "",
-      label: "",
-    };
-    this.editorWrapper = null;
-    this.fileModels = {};
-    (window as any).setLabel = (label) => {
-      this.setState({ label })
+  const pathDecorator = {
+    renderPath(target, file) {
+      return renderPath(props.fileList, props.codeOnly, target, file)
+    }
+  }
+  const fileTree = {
+    getRoot(): Promise<ITreeNode> {
+      return props.fileList.getRoot()
+    },
+    refresh(): Promise<void> {
+      return props.fileList.refresh(label)
     }
   }
 
-  componentDidMount() {
-    const _this: CoverageVisualizer = this
-    const treeConfig = {
-      dataSource: {
-        /**
-         * Returns the unique identifier of the given element.
-         * No more than one element may use a given identifier.
-         */
-        getId: function (tree, element) {
-          return element.key;
-        },
+  return <CodeTree control={ctrl} fileTree={fileTree} fileDetailGetter={props.fileDetailGetter} pathDecorater={pathDecorator} />
+}
 
-        /**
-         * Returns a boolean value indicating whether the element has children.
-         */
-        hasChildren: function (tree, element) {
-          return element.isDirectory;
-        },
+async function renderPath(fileList: FileTree, codeOnly: boolean, target: any, file: any) {
+  const decoration = await fileList.getPathDecorations(file.path)
+  const renderCov = !codeOnly && decoration && decoration.total > 0
 
-        /**
-         * Returns the element's children as an array in a promise.
-         */
-        getChildren: function (tree, element) {
-          return Promise.resolve(element.children);
-        },
+  console.log("render file:", file, renderCov, codeOnly)
 
-        /**
-         * Returns the element's parent in a promise.
-         */
-        getParent: function (tree, element) {
-          return Promise.resolve(element.parent);
-        },
-      },
-      renderer: {
-        getHeight: function (tree, element) {
-          return 24;
-        },
-        renderTemplate: function (tree, templateId, container) {
-          return new FileTemplate(container, {
-            // options
-            async render(target, file) {
-              const div = (a, b) => {
-                if (b > 0 && a >= 0) {
-                  return a / b
-                }
-                return 1
-              }
-              console.log("render file:", file)
-              const decoration = await _this.props.fileList.getPathDecorations(file.path)
-              if (decoration && decoration.total > 0) {
-                const coverRatio = div(decoration.covered, decoration.total)
-                const color = coverRatio >= 0.5 ? "green" : "red"
-                target.label.innerHTML = `<div>${file.name} <span style="color: ${color}"><small>${(coverRatio * 100).toFixed(2)}%</samll></span><div>`;
-              } else {
-                target.label.innerHTML = `<div>${file.name}<div>`;
-              }
-              target.monacoIconLabel.title = file.path;
-            },
-          });
-        },
-        renderElement: function (tree, element, templateId, templateData) {
-          templateData.set(element);
-        },
-        disposeTemplate: function (tree, templateId, templateData) {
-          console.log("dispose:", templateData)
-          // FileTemplate.dispose();
-        },
-      },
-
-      //tree config requires a controller property but we would defer its initialisation
-      //to be done by the MonacoTree component
-      //controller: createController(this, this.getActions.bind(this), true),
-      dnd: new TreeDnD(),
-    };
-
-    this.props.fileList.refresh(this.state.label).then(async () => {
-      const root = await this.props.fileList.getRoot()
-      console.log("get root:", root)
-      this.setState({
-        rootDir: root,
-        treeConfig: treeConfig,
-      })
-    })
+  if (renderCov) {
+    target.label.innerHTML = renderPathCovHTML(file.name, decoration.total, decoration.covered)
+  } else {
+    target.label.innerHTML = `<div>${file.name}<div>`;
   }
+  target.monacoIconLabel.title = file.path;
+}
 
-  get editor(): monaco.editor.IStandaloneCodeEditor {
-    return this.editorWrapper.editor;
+
+export interface renderCovPathOptions {
+  ratioBase?: number // 0.5
+}
+
+function div(a: number, b: number): number {
+  if (b > 0 && a >= 0) {
+    return a / b
   }
-  async componentDidUpdate(prevProps, prevStates) {
-    if (this.state.label !== prevStates.label) {
-      await this.props.fileList.refresh(this.state.label)
-      const root = await this.props.fileList.getRoot()
-      this.setState({
-        rootDir: root
-      })
-    }
-
-    // update content
-    if (this.state.activeFile != prevStates.activeFile || this.state.label !== prevStates.label) {
-      console.log("activeFile or label change")
-      const activeFile = this.state.activeFile;
-      let modelOpts = this.fileModels[activeFile];
-      if (!modelOpts) {
-        const fd = await this.props.fileDetailGetter.getDetail(activeFile)
-        if (!fd) {
-          modelOpts = {
-            model: monaco.editor.createModel(
-              `cannot show content for ${activeFile}`,
-              "plaintext",
-              monaco.Uri.file(activeFile)
-            ),
-            options: {
-              readOnly: true,
-            },
-            exists: false
-          };
-        } else {
-          console.log("creating model:", activeFile)
-          modelOpts = {
-            model: monaco.editor.createModel(
-              fd.content,
-              fd.language,
-              monaco.Uri.file(activeFile)
-            ),
-            options: {
-              readOnly: true,
-            },
-            exists: true,
-          };
-        }
-        this.fileModels[activeFile] = modelOpts;
-      }
-      if (modelOpts.exists) {
-        modelOpts.decorations = (this.props.fileList.getFileDecorations && await this.props.fileList.getFileDecorations(activeFile))
-      }
-      console.log("model:", modelOpts);
-      this.editor.setModel(modelOpts.model);
-      this.editor.updateOptions(modelOpts.options);
-      modelOpts.decorationsRes?.clear?.()
-      modelOpts.decorationsRes = this.editor.createDecorationsCollection(modelOpts.decorations);
-    }
-  }
-
-  onClickFile(file) {
-    if (file.isDirectory) {
-      return;
-    }
-
-    const names = []
-    let p = file
-    while (p.parent) { // ignore root
-      names.push(p.name)
-      p = p.parent
-    }
-    this.setState({ activeFile: names.reverse().join("/") });
-
-    if (
-      Date.now() - this.lastClickedTime < 500 &&
-      this.lastClickedFile === file
-    ) {
-      this.onDoubleClickFile(file);
-    } else {
-      console.log(file.name + " clicked");
-    }
-
-    this.lastClickedTime = Date.now();
-    this.lastClickedFile = file;
-  }
-
-  onDoubleClickFile(file) {
-    console.log(file.name + " double clicked");
-  }
-  onChange(e) {
-    const { activeFile } = this.state;
-    console.log("change:", activeFile);
-  }
-
-  render() {
-    return <div
-      style={{ display: "flex", height: "100%" }}>
-      <div
-        className="show-file-icons show-folder-icons"
-        style={{
-          width: "300px",
-          height: "100%",
-        }}
-      >
-        <div className="workspaceContainer" >
-          {!this.state.rootDir ? null : (
-            <MonacoTree
-              directory={this.state.rootDir}
-              treeConfig={this.state.treeConfig}
-              onClickFile={this.onClickFile.bind(this)}
-            />
-          )}
-        </div>
-      </div>
-      < MonacoEditor
-        ref={(e: MonacoEditor) => {
-          this.editorWrapper = e;
-        }}
-        onChange={this.onChange.bind(this)}
-      />
-    </div >;
+  return 1
+}
+export function renderPathCovHTML(filename: string, total: number, covered: number, opts?: renderCovPathOptions): string {
+  if (total > 0) {
+    const ratioBase = opts?.ratioBase > 0 ? opts.ratioBase : 0.5
+    const coverRatio = div(covered, total)
+    const color = coverRatio >= ratioBase ? "green" : "red"
+    return `<div>${filename} <span style="color: ${color}"><small>${(coverRatio * 100).toFixed(2)}%</samll></span><div>`
+  } else {
+    return `<div>${filename}<div>`;
   }
 }

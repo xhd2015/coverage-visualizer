@@ -33,9 +33,13 @@ Object.keys(Color).forEach((k) => {
 
 
 export function createDecoration(startLine, endLine, color: Color) {
+    return createDecorationV2(startLine, 1, endLine, Number.MAX_SAFE_INTEGER, color)
+}
+
+export function createDecorationV2(startLine: number, startColumn: number, endLine: number, endColumn: number, color: Color) {
     const colorName = Object.keys(Color).filter(k => Color[k] === color)[0]
     return {
-        range: new monaco.Range(startLine, 1, endLine, Number.MAX_SAFE_INTEGER),
+        range: new monaco.Range(startLine, startColumn, endLine, endColumn),
         options: {
             className: "decoration-" + colorName,
             zIndex: 3,

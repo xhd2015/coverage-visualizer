@@ -64,7 +64,7 @@ export class FileTemplate extends Template {
     }
 
     if (icon) {
-      console.log("file icon:", file, icon);
+      // console.log("file icon:", file, icon);
       this.monacoIconLabel.classList.add(icon);
     }
     if (this.options?.render) {
