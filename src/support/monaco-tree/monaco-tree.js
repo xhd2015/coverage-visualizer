@@ -6,17 +6,15 @@ class MonacoTree extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = { directory: this.props.directory };
+    this.state = {
+      directory: this.props.directory,
+      onClickHandler: props.onClickFile,
+    };
   }
 
   componentDidMount() {
     this.ensureTree();
     this.tree.model.setInput(this.props.directory);
-    this.tree.model.onDidSelect((e) => {
-      if (e.selection.length) {
-        this.props.onClickFile(e.selection[0]);
-      }
-    });
     // TODO: may bind this.onLayout?
     // document.addEventListener("layout", this.onLayout);
   }
@@ -41,11 +39,8 @@ class MonacoTree extends React.Component {
       this.props.directory != prevProps.directory ||
       this.props.onClickFile != prevProps.onClickFile
     ) {
-      this.tree.model.onDidSelect((e) => {
-        if (e.selection.length) {
-          this.props.onClickFile(e.selection[0]);
-        }
-      });
+      // update onClick
+      this.setState({ ...this.state, onClickHandler: this.props.onClickFile });
     }
     this.tree.model.refresh();
     // this.tree.model.onDidSelect((e) => {
@@ -77,6 +72,13 @@ class MonacoTree extends React.Component {
     const { treeConfig, getActions } = this.props;
     treeConfig.controller = createController(this, getActions, true);
     this.tree = new Tree(this.container, treeConfig);
+    // install click handler for fresh tree
+    this.tree.model.onDidSelect((e) => {
+      if (e.selection.length) {
+        // this.props.onClickFile(e.selection[0]);
+        this.state.onClickHandler?.(e.selection[0]);
+      }
+    });
   }
 
   expandTree(tree) {

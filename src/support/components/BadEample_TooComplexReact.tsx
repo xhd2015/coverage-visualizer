@@ -14,7 +14,6 @@ import "../assets/custom.css";
 import "../assets/main.css";
 import "../assets/vscode-icons.css";
 import usePrevious from "./usePrev";
-import { ContentDecorator } from "./v2/model";
 
 export interface RenderTarget {
     monacoIconLabel: { title: string }
@@ -35,6 +34,10 @@ export interface CodeFileTree {
     // optional refresh
     refresh?: () => Promise<void>
 }
+export interface ContentDecorator {
+    getFileDecorations: (path: string) => Promise<monaco.editor.IModelDeltaDecoration[]>
+}
+
 
 export interface Control {
     notifyFileChanged: () => Promise<void>
