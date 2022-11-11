@@ -172,12 +172,13 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
     // associate content
     const updateContent = async (): Promise<void> => {
         if (!props.file || !props.fileDetailGetter) {
+            console.log("INFO file or fileDetailGetter not prepared, will clear model", props.uriPrefix, props.file)
             setModel(null)
             return
         }
 
         const opts = await getEditorModel(props.file, cache, props.fileDetailGetter, props.contentDecorator, `${props.uriPrefix || ''}_v${fileGetterVersion}/`)
-        console.log("updating model:", props.file, opts)
+        console.log("updating model:", props.uriPrefix, props.file, opts)
         setModel(opts)
         setModelVersion(modelVersion + 1)
         return

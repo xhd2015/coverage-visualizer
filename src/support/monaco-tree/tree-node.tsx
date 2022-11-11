@@ -1,3 +1,13 @@
+export interface MTreeNode {
+  key: string
+  name: string
+  isDirectory: boolean
+  children: MTreeNode[]
+  parent: MTreeNode
+  path: string // readonly path
+}
+
+
 /**
  * Tree Node class
  *
@@ -10,7 +20,7 @@ class TreeNode {
    * @param {string} name Name of file
    * @param {boolean} isDirectory True if node is a directory otherwise node is a file
    * @param {TreeNode} parent parent tree node
-   *
+   * 
    * @memberof TreeNode
    */
   constructor(key, name, isDirectory, parent) {
@@ -19,9 +29,11 @@ class TreeNode {
     this.isDirectory = isDirectory;
     this.children = [];
     this.parent = parent;
+    this.path = this.getPath()
   }
 
-  get path() {
+  getPath() {
+
     //if this is the rootnode (this.parent == null) then just return empty string
     //we don't need the rootnode's name appearing in the path of its children
     if (this.parent == null) return "";
@@ -43,4 +55,5 @@ class TreeNode {
   }
 }
 
-export { TreeNode };
+
+export { TreeNode }

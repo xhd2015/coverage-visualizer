@@ -29,8 +29,13 @@ export default function DirTreeDemo() {
         })
     }, [])
 
-    return <DirTree
-        fileTree={fileTree}
-        onSelectFile={setSelectFile}
-    >Selected:<div>{selectFile}</div></DirTree>
+    return <div style={{ display: "flex" }}>
+        <DirTree
+            fileTree={fileTree}
+            onSelectFile={setSelectFile}
+        >
+        </DirTree>
+        <div>Selected:<div>{selectFile}</div>
+        </div>
+    </div>
 }

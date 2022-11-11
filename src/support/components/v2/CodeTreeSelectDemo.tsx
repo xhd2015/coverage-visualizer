@@ -1,18 +1,19 @@
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { createDecorationV2 } from "../../support/decoration"
 import { FileDetail, FileDetailGetter, ITreeNode, NodeTreeBuilder } from "../../support/file"
 import Code from "./Code"
 import CodeTree from "./CodeTree"
 import DiffCode from "./DiffCode"
-import DirTree, { CodeFileTree, PathDecorator } from "./DirTree"
+import DirTree, { CodeFileTree, DirTreeControl, PathDecorator, RenderFile, RenderTarget } from "./DirTree"
 import { ContentDecorator } from "./model"
 
+
+import "./code.css"
 
 export interface IProps {
     // file tree
     fileTree: CodeFileTree
     pathDecorater?: PathDecorator
-
 
     // conent
     fileDetailGetter?: FileDetailGetter
@@ -27,7 +28,7 @@ export interface IProps {
     height?: string // default 400px
 }
 
-export default function CodeTreeDemo(props: IProps) {
+export default function CodeTreeSelectDemo(props: IProps) {
 
     const [files, setFiles] = useState({
         "main.go": {
@@ -52,15 +53,18 @@ This is what we've done.
             content: "package hello",
             oldContent: "package what"
         },
+        "a/c/d.go": {
+            content: "package hello",
+            oldContent: "package what"
+        },
     })
+
+
+
     const [fileTree, setFileTree] = useState(null as any)
     const [state, setState] = useState({} as any)
-    // const [showDiff, setShowDiff] = useState(true)
-    const [showDiff, setShowDiff] = useState(false)
 
-    useEffect(() => {
-        (window as any).setShowDiff = setShowDiff
-    }, [])
+    const [dirControl] = useState({} as DirTreeControl)
 
 
     useEffect(() => {
@@ -86,21 +90,31 @@ This is what we've done.
                 return Promise.resolve([createDecorationV2(7, 2, 7, 10, 'NO_COV')])
             },
         }
-        const oldFileDetailGetter = {
-            getDetail(filename: string): Promise<FileDetail | null> {
-                return Promise.resolve({ content: files[filename].oldContent })
-            },
-        }
 
-        setState({ fileDetailGetter, contentDecorator, oldFileDetailGetter })
+        setState({ fileDetailGetter, contentDecorator })
 
     }, [files])
 
+    const [checkedMap] = useState({
+        "main.go": true,
+    })
+
     return <CodeTree
         fileTree={fileTree}
-        showDiff={showDiff}
         fileDetailGetter={state.fileDetailGetter}
         contentDecorator={state.contentDecorator}
-        diffFileDetailGetter={state.oldFileDetailGetter}
+        dirControl={dirControl}
+        checkedMap={checkedMap}
+        showCheckbox={true}
+        onFileCheck={(file: string, checked: boolean) => {
+            console.log("file checked:", file, checked)
+            checkedMap[file] = checked
+
+            const c = dirControl.getCheckbox(file)
+            // may not be expanded yet
+            c?.setCheckedAllDescendents?.(checked)
+
+            console.log("current checkedMap:", checkedMap)
+        }}
     />
 }

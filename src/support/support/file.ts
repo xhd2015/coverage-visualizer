@@ -1,5 +1,5 @@
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import { createDecoration, Color } from "./decoration"
+import { createDecoration } from "./decoration"
 import { TreeNode } from "../monaco-tree/tree-node"
 
 export interface FileDetailGetter {
@@ -126,9 +126,12 @@ export class FileDetailMemo {
         if (!detail) {
             // console.log("calling get:", filename)
             detail = this.get(filename)
-            this.fileContent[filename] = detail
         }
-        return Promise.resolve(detail)
+        return Promise.resolve(detail).then((e) => {
+            // if err, will not save
+            this.fileContent[filename] = detail
+            return e
+        })
     }
 }
 
@@ -170,14 +173,14 @@ export class RemoteFileList {
     getDecorations(filename: string, label: string): Promise<monaco.editor.IModelDeltaDecoration[]> {
         console.log("get decorations:", filename, label)
         if (filename === "main.go") {
-            return Promise.resolve([createDecoration(6, 6, Color.MISSING)
+            return Promise.resolve([createDecoration(6, 6, 'NO_COV')
             ])
         }
         return
     }
 }
 export interface TreeNodePair<T> {
-    node: TreeNode
+    node: ITreeNode
     info: T
 }
 
@@ -212,6 +215,19 @@ export function traverseNode(node: ITreeNode, fn: (node: ITreeNode) => boolean, 
         return true
     }
     doTraverseNode(node)
+}
+
+export function deepClone(node: ITreeNode, filter: (node: ITreeNode) => boolean, parent?: ITreeNode) {
+    if (!node) {
+        return
+    }
+    const newNode = { ...node, parent }
+    newNode.children = node.children?.filter?.(e => filter ? filter(e) : true)?.map?.(e => deepClone(e, filter, newNode))
+    return newNode
+}
+
+export function newNodeTreeBuilder<T>(): NodeTreeBuilder<T> {
+    return new NodeTreeBuilder<T>(null, "")
 }
 
 export class NodeTreeBuilder<T> {
@@ -274,7 +290,7 @@ export class NodeTreeBuilder<T> {
     build(): NodeTree<T> {
         const mapping: { [path: string]: TreeNodePair<T> } = {}
         function doBuild(node: NodeTreeBuilder<T>, parent: TreeNodePair<T>): TreeNodePair<T> {
-            const treeNode: ITreeNode = new TreeNode(node.path, node.name, !node.markedAsFile, parent?.node)
+            const treeNode: ITreeNode = new TreeNode(node.path, node.name, !node.markedAsFile, parent?.node) as any
             const pair = {
                 node: treeNode,
                 info: node.data,

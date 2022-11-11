@@ -1,0 +1,8 @@
+.monaco-tree .monaco-tree-rows>.monaco-tree-row>.content {
+    display: flex;
+    align-items: baseline;
+}
+
+.monaco-tree .monaco-tree-rows>.file-checkbox {
+    margin-right: 1px;
+}

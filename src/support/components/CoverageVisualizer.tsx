@@ -81,7 +81,7 @@ export interface renderCovPathOptions {
   ratioBase?: number // 0.5
 }
 
-function div(a: number, b: number): number {
+export function div(a: number, b: number): number {
   if (b > 0 && a >= 0) {
     return a / b
   }

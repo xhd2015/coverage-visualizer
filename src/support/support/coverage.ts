@@ -1,5 +1,5 @@
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
-import { Color, createDecoration } from "./decoration";
+import { createDecoration } from "./decoration";
 import { FileDetail, FileInfo as XFileInfo, FileTree, NodeTreeBuilder, ITreeNode, NodeTree, PathDecoration } from "./file";
 import { Promised } from "./promised";
 
@@ -204,7 +204,7 @@ export class CoverageProfileFiles implements FileTree {
                 decorations.push(createDecoration(
                     block.startLine,
                     block.endLine,
-                    count > 0 ? Color.GREEN : Color.MISSING,
+                    count > 0 ? 'HAS_COV' : 'NO_COV',
                 ))
                 return true
             },

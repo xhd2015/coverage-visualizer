@@ -1,0 +1,8 @@
+/*keep sync with colors.tsx*/
+.decoration-HAS_COV {
+    background-color: #d0fffb;
+}
+
+.decoration-NO_COV {
+    background-color: #ffa50038;
+}

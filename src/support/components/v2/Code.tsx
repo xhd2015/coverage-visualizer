@@ -91,7 +91,9 @@ export default function Code(props: IProps) {
             containerRef.current
         );
         editor.layout()
-        setEditor(editor)
+        setEditor(editor);
+
+        (window as any).X3 = editor;
 
         const handler = (e) => {
             editor.layout()

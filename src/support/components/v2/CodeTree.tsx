@@ -2,7 +2,7 @@ import { useState } from "react"
 import { FileDetailGetter, ITreeNode } from "../../support/file"
 import Code from "./Code"
 import DiffCode from "./DiffCode"
-import DirTree, { CodeFileTree, PathDecorator } from "./DirTree"
+import DirTree, { CodeFileTree, DirTreeControl, FileExtraOptions, PathDecorator } from "./DirTree"
 import { ContentDecorator } from "./model"
 
 
@@ -12,7 +12,12 @@ export interface Control {
 export interface IProps {
     // file tree
     fileTree: CodeFileTree
+    extraOptions?: { [path: string]: FileExtraOptions }
     pathDecorater?: PathDecorator
+    onFileCheck?: (file: string, checked: boolean) => void
+
+    checkedMap?: { [file: string]: boolean }
+    showCheckbox?: boolean
 
     // conent
     fileDetailGetter?: FileDetailGetter
@@ -24,6 +29,8 @@ export interface IProps {
     diffContentDecorator?: ContentDecorator
 
     hideDecoratorWhenDiff?: boolean
+
+    dirControl?: DirTreeControl
 
     control?: Control
     onTreeUpdate?: (root: ITreeNode) => void
@@ -42,10 +49,15 @@ export default function CodeTree(props: IProps) {
 
     return <DirTree
         fileTree={props.fileTree}
+        extraOptions={props.extraOptions}
         onSelectFile={setSelectFile}
         height={props.height}
         onTreeUpdate={props.onTreeUpdate}
         pathDecorater={props.pathDecorater}
+        onFileCheck={props.onFileCheck}
+        checkedMap={props.checkedMap}
+        showCheckbox={props.showCheckbox}
+        control={props.dirControl}
     >
         {
             !props.showDiff && <Code

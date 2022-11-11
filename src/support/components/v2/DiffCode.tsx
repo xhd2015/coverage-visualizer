@@ -90,6 +90,8 @@ export default function DiffCode(props: IProps) {
             }
             // don't set null, we want remain when loading
             // return () => diffEditor?.setModel?.(null)
+        } else {
+            console.log("INFO diff editor oldModel or model not prepared, will not show any content")
         }
         // comment the following code,remain still
         // else {

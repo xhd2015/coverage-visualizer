@@ -54,7 +54,7 @@ This is what we've done.
         }
         const contentDecorator = {
             getFileDecorations(path): Promise<monaco.editor.IModelDeltaDecoration[]> {
-                return Promise.resolve([createDecorationV2(7, 2, 7, 10, Color.GREY)])
+                return Promise.resolve([createDecorationV2(7, 2, 7, 10, 'NO_COV')])
             },
         }
         const oldFileDetailGetter = {

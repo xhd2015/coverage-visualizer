@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createDecorationV2 } from "../support/decoration";
+import { Color, createDecorationV2 } from "../support/decoration";
 import { FileDetail, ITreeNode, NodeTreeBuilder } from "../support/file";
 import CodeTree from "./CodeTree";
 
@@ -55,7 +55,7 @@ This is what we've done.
         }}
         contentDecorator={{
             getFileDecorations(path): Promise<monaco.editor.IModelDeltaDecoration[]> {
-                return Promise.resolve([createDecorationV2(7, 2, 7, 10, 'NO_COV')])
+                return Promise.resolve([createDecorationV2(7, 2, 7, 10, Color.GREY)])
             },
         }}
         diffFileDetailGetter={{
