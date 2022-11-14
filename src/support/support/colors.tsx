@@ -13,7 +13,7 @@ const colors: Record<AnnotationKey, ColorConfig> = {
         colorHex: "#ffa50038" // orange lighten
     },
     "CHANGE": {
-        colorHex: "#10bb1078" // green
+        colorHex: "#CAE19F" // green like
     },
     "DELETE": {
         colorHex: "#ff000040" // red
