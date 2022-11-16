@@ -85,7 +85,7 @@ export interface IProps {
     // on tree update
     onTreeUpdate?: (root: ITreeNode) => void
     onSelectFile?: (file: string) => void
-    onFileCheck?: (file: string, checked: boolean) => void
+    onFileCheck?: (file: string, dir: boolean, checked: boolean) => void
 
     checkedMap?: { [file: string]: boolean }
 
@@ -114,17 +114,12 @@ export default function DirTree(props: IProps) {
     const fileCheckRef = useRef(props.onFileCheck)
     fileCheckRef.current = props.onFileCheck
 
-
-    // checkedMpa
-    const checkedMapRef = useRef(props.checkedMap)
-    checkedMapRef.current = { ...props.checkedMap }
-
     const [treeConfigVersion, setTreeConfigVersion] = useState(0)
 
     // tree config
     const [treeConfig, setChecked] = useMemo(() => {
         // clear checkboxMap
-        return refreshTreeConfig(props.pathDecorater, props.showCheckbox, fileCheckRef, checkedMapRef, nodeMap)
+        return refreshTreeConfig(props.pathDecorater, props.showCheckbox, fileCheckRef, nodeMap)
     }, [props.pathDecorater, props.showCheckbox, nodeMap, treeConfigVersion])
 
     const [lastClickedTime, setLastClickedTime] = useState(0)
@@ -313,34 +308,40 @@ export interface CheckControl {
     setCheckedAllDescendents: (v: boolean) => void
 }
 
+const uniqRoleMarkerCheckbox = "file-checkbox-role-uniq-marker"
 function createCheckbox(): HTMLInputElement {
     const e = document.createElement("input")
     e.type = "checkbox"
     e.classList.add("file-checkbox")
+    e.classList.add(uniqRoleMarkerCheckbox)
     return e
 }
 
 export function refreshTreeConfig(opts: PathDecorator, showCheckbox: boolean,
-    fileCheckRef: React.MutableRefObject<(file: string, checked: boolean) => void>,
-    checkedMapRef: React.MutableRefObject<{ [file: string]: boolean; }>,
+    onCheckedRef: React.MutableRefObject<(file: string, dir: boolean, checked: boolean) => void>,
     nodeMap: { [path: string]: ITreeNode }) {
 
     let id = 1
     const associatedCheckbox: {
         [templateID: number]: {
             path: string
-            element: HTMLInputElement
-            listener: any
+            // element: HTMLInputElement
+            // listener: any
         }
     } = {}
 
-    const fileMap: { [path: string]: number } = {}
+    // TODO: since we haved fixed the checkedMap issue, can we now turn back to template memo?
+    const checkedMap: { [file: string]: boolean; } = {}
+
+    // create checkbox for each file, avoid reusing them.(template sometimes has bug when reusing checkbox)
+    const fileCheckbox: { [path: string]: HTMLInputElement } = {}
 
     const setChecked = (file: string, checked: boolean, allDescendent: boolean) => {
         // console.log("DEBUG setChecked:", file, checked, fileMap[file])
-        if (checkedMapRef.current[file] !== checked) {
-            checkedMapRef.current[file] = checked
-            fileCheckRef.current?.(file, checked)
+        const prevChecked = checkedMap[file]
+        checkedMap[file] = checked
+        if (prevChecked !== checked) {
+            onCheckedRef.current?.(file, nodeMap[file].isDirectory, checked)
         }
         if (allDescendent) {
             traverseNode(nodeMap[file], n => {
@@ -349,9 +350,16 @@ export function refreshTreeConfig(opts: PathDecorator, showCheckbox: boolean,
             })
         }
         // render visible checkbox
-        const templateID = fileMap[file]
-        if (templateID) { // ^-^, templateID=0 is a humor case.
-            associatedCheckbox[templateID].element.checked = checked
+        // const templateID = fileMap[file]
+        // if (!templateID) {
+        //     // console.log("setChecked no template file:", file, templateID)
+        // }
+        // if (templateID) { // ^-^, templateID=0 is a humor case.
+        //     associatedCheckbox[templateID].element.checked = checked
+        // }
+        const fCheckbox = fileCheckbox[file]
+        if (fCheckbox && fCheckbox.checked !== checked) {
+            fCheckbox.checked = checked
         }
     }
     const treeConfig = {
@@ -409,38 +417,46 @@ export function refreshTreeConfig(opts: PathDecorator, showCheckbox: boolean,
             // file template may be reused, so renderElement maybe called multiple times for the same templateData
             renderElement: function (tree, file: RenderFile, templateId, templateData: RenderTarget & any) {
                 templateId = templateData.id
-                // console.log("render file:", templateId, file)
                 templateData.set(file);
                 if (showCheckbox) {
+                    let checkbox = fileCheckbox[file.path]
+                    if (!checkbox) {
+                        checkbox = createCheckbox()
+
+                        // set initial value
+                        const checked = checkedMap[file.path]
+                        checkbox.checked = checked === undefined || checked // default checked
+                        checkbox.addEventListener('change', (e) => {
+                            const targetChecked = (e.target as any).checked
+                            if (checkedMap[file.path] !== targetChecked) {
+                                onCheckedRef?.current?.(file.path, nodeMap[file.path].isDirectory, targetChecked)
+                                checkedMap[file.path] = targetChecked
+                            }
+                        })
+                        fileCheckbox[file.path] = checkbox
+                    }
+                    const p: HTMLElement = templateData.monacoIconLabel.parentElement
                     let data = associatedCheckbox[templateId]
                     if (!data) {
-                        const el = createCheckbox()
                         data = {
-                            path: "",
-                            element: el,
-                            listener: undefined // set later
+                            path: "" // unrelated
                         }
                         associatedCheckbox[templateId] = data
                     } else {
-                        data.element.removeEventListener('change', data.listener)
-                        data.element.remove()
-                        delete fileMap[data.path]
-                    }
-                    const checked = checkedMapRef.current[file.path]
-                    data.path = file.path
-                    data.element.checked = checked === undefined || checked // default checked
-                    data.listener = (e) => {
-                        const targetChecked = e.target.checked
-                        if (checkedMapRef.current[file.path] !== targetChecked) {
-                            fileCheckRef?.current?.(file.path, targetChecked)
-                            checkedMapRef.current[file.path] = targetChecked
+                        // console.log("render reset el file:", templateId, file.path)
+                        // data.element.removeEventListener('change', data.listener)
+                        // data.element.remove()
+
+                        // remove element with checkbox role
+                        for (let child = p.firstElementChild; child; child = child.nextElementSibling) {
+                            if (child.classList.contains(uniqRoleMarkerCheckbox)) {
+                                child.remove()
+                                break
+                            }
                         }
                     }
-                    data.element.addEventListener('change', data.listener)
-                    fileMap[file.path] = templateId
 
-                    const p: HTMLElement = templateData.monacoIconLabel.parentElement
-                    p.prepend(data.element)
+                    p.prepend(checkbox)
                 }
             },
             disposeTemplate: function (tree, templateId, templateData: RenderTarget & any) {

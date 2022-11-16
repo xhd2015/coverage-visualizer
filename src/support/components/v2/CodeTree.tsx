@@ -14,7 +14,7 @@ export interface IProps {
     fileTree: CodeFileTree
     extraOptions?: { [path: string]: FileExtraOptions }
     pathDecorater?: PathDecorator
-    onFileCheck?: (file: string, checked: boolean) => void
+    onFileCheck?: (file: string, dir: boolean, checked: boolean) => void
 
     checkedMap?: { [file: string]: boolean }
     showCheckbox?: boolean
