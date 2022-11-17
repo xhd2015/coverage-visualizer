@@ -6,3 +6,8 @@
 .monaco-tree .monaco-tree-rows>.file-checkbox {
     margin-right: 1px;
 }
+
+
+.monaco-icon-label.has-children-checked .label-name {
+    color: green
+}
