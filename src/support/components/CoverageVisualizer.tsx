@@ -77,8 +77,11 @@ async function renderPath(fileList: FileTree, codeOnly: boolean, target: any, fi
 }
 
 
+export type CoverageMode = 'percentage' | 'line'
+
 export interface renderCovPathOptions {
   ratioBase?: number // 0.5
+  coverageMode?: CoverageMode
 }
 
 export function div(a: number, b: number): number {
@@ -92,7 +95,9 @@ export function renderPathCovHTML(filename: string, total: number, covered: numb
     const ratioBase = opts?.ratioBase > 0 ? opts.ratioBase : 0.5
     const coverRatio = div(covered, total)
     const color = coverRatio >= ratioBase ? "green" : "red"
-    return `<div>${filename} <span style="color: ${color}"><small>${(coverRatio * 100).toFixed(2)}%</samll></span><div>`
+    const { coverageMode } = opts || {}
+    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : `${(coverRatio * 100).toFixed(2)}%`
+    return `<div>${filename} <span style="color: ${color}"><small>${showValue}</samll></span><div>`
   } else {
     return `<div>${filename}<div>`;
   }
