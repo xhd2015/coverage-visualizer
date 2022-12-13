@@ -96,7 +96,8 @@ export function renderPathCovHTML(filename: string, total: number, covered: numb
     const coverRatio = div(covered, total)
     const color = coverRatio >= ratioBase ? "green" : "red"
     const { coverageMode } = opts || {}
-    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : `${(coverRatio * 100).toFixed(2)}%`
+    const percent = `${(coverRatio * 100).toFixed(2)}%`
+    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : percent
     return `<div>${filename} <span style="color: ${color}"><small>${showValue}</samll></span><div>`
   } else {
     return `<div>${filename}<div>`;

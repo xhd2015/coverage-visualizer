@@ -535,7 +535,7 @@ export function refreshTreeConfig(opts: PathDecorator, showCheckbox: boolean,
         //tree config requires a controller property but we would defer its initialisation
         //to be done by the MonacoTree component
         //controller: createController(this, this.getActions.bind(this), true),
-        dnd: new TreeDnD(),
+        // dnd: new TreeDnD(),
     };
     return [treeConfig, setChecked]
 }
