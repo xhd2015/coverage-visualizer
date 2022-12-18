@@ -13,9 +13,10 @@ export function createDecoration(startLine, endLine, color: AnnotationKey) {
 
 export interface DecorationOptinos {
     classNames?: string[]
+    color?: string
 }
 export function createDecorationV2(startLine: number, startColumn: number, endLine: number, endColumn: number, annotation: AnnotationKey, opts?: DecorationOptinos) {
-    const colorConf = colors[annotation]
+    const colorConf = opts?.color || colors[annotation]?.colorHex
     const classNames = ["decoration-" + annotation]
     if (opts?.classNames?.length > 0) {
         classNames.push(...opts.classNames)
@@ -27,10 +28,10 @@ export function createDecorationV2(startLine: number, startColumn: number, endLi
             // className: "background-black",
             // zIndex: 3,
             overviewRuler: {
-                color: colorConf.colorHex,
+                color: colorConf,
                 position: 1,
             },
-            minimap: { color: colorConf.colorHex, position: 1 },
+            minimap: { color: colorConf, position: 1 },
         },
     };
 }
