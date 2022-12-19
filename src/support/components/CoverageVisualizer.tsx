@@ -109,6 +109,13 @@ export function divPercentFloor(a, b): string {
   }
   return ''
 }
+export function divPercentFloorInt(a, b): string {
+  if (b > 0) {
+    const r = a / b
+    return `${Math.floor(Number(r * 100))}%`
+  }
+  return ''
+}
 
 export function percentFloor(r): string {
   if (r >= 0) {
