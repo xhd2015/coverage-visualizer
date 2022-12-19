@@ -96,10 +96,26 @@ export function renderPathCovHTML(filename: string, total: number, covered: numb
     const coverRatio = div(covered, total)
     const color = coverRatio >= ratioBase ? "green" : "red"
     const { coverageMode } = opts || {}
-    const percent = `${(coverRatio * 100).toFixed(2)}%`
-    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : percent
+    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : divPercentFloor(covered, total)
     return `<div>${filename} <span style="color: ${color}"><small>${showValue}</samll></span><div>`
   } else {
     return `<div>${filename}<div>`;
   }
+}
+
+export function divPercentFloor(a, b): string {
+  if (b > 0) {
+    return percentFloor(a / b)
+  }
+  return ''
+}
+
+export function percentFloor(r): string {
+  if (r >= 0) {
+    return `${floorWithTwoPoints(r)}%`
+  }
+  return ''
+}
+export function floorWithTwoPoints(x: number): number {
+  return Math.floor(Number(x * 10000)) / 100
 }
