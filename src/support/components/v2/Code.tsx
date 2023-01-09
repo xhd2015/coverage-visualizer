@@ -1,6 +1,6 @@
 // CoverageVisualizer is not only a coverage visualizer, the coverage feature is opt-in.
 // you can also disable it to get a code viewer.
-import React, { useEffect, useRef, useState } from "react";
+import React, { CSSProperties, useEffect, useRef, useState } from "react";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { FileDetailGetter, ITreeNode } from "../../support/file";
 
@@ -15,10 +15,10 @@ export interface RenderFile {
     name: string
 }
 
-export interface PathDecorator {
-    // optional
-    renderPath?: (target: RenderTarget, file: RenderFile) => Promise<void>
-}
+// export interface PathDecorator {
+//     // optional
+//     renderPath?: (target: RenderTarget, file: RenderFile) => Promise<void>
+// }
 
 export interface CodeFileTree {
     getRoot(): Promise<ITreeNode>
@@ -38,6 +38,9 @@ export interface IProps {
     fileDetailGetter?: FileDetailGetter
     contentDecorator?: ContentDecorator
     control?: Control
+
+    containerStyle?: CSSProperties
+    containerClassName?: string
 }
 
 export default function Code(props: IProps) {
@@ -107,12 +110,14 @@ export default function Code(props: IProps) {
         }
     }, [])
 
-    return <div
-        ref={containerRef}
-        className="code-container"
-        style={{
-            width: "100%",
-            height: "100%"
-        }}
-    />
+    return <div style={props.containerStyle} className={props.containerClassName}>
+        <div
+            ref={containerRef}
+            className="code-container"
+            style={{
+                width: "100%",
+                height: "100%"
+            }}
+        />
+    </div>
 }
