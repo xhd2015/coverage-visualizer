@@ -2,34 +2,13 @@
 import { Tag } from "antd"
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 import { VscCollapseAll } from "react-icons/vsc"
-import ExpandList, { ExpandItem, ItemController } from "./ExpandList"
-import { ItemIndex, ItemPath } from "./List"
+import ExpandList, { ExpandItem, ItemController, useExpandListController } from "./ExpandList"
+import { ItemIndex } from "./List"
 import { useCurrent } from "./react-hooks"
-import { filter, map, traverse } from "./tree"
+import Checkbox from "./support/Checkbox"
+import { CallRecord } from "./trace-types"
+import { filter, map } from "./tree"
 
-export interface RootRecord {
-    startTime: string // the abolute begin time
-    root: CallRecord
-}
-
-export interface CallRecord {
-    pkg: string
-    func: string
-    file: string
-    line: number // 1-based
-
-    start: number // relative to request begin, as nanoseconds
-    end: number
-
-    args: any
-
-    error?: string // has error,may be empty
-    panic?: boolean // has panic
-    result: any // keyed by name, if no name, a slice
-
-    log?: any // log set within request
-    children?: CallRecord[]
-}
 
 const errorColor = "#DA2829"  // red
 const panicColor = "#ffb500"  // orange-like
@@ -51,15 +30,29 @@ export interface CallRecordItem extends ExpandItem {
 export interface TraceListProps {
     records?: CallRecord[]
     className?: string
+
+    // style for the root container
     style?: CSSProperties
 
-    onSelectChange?: (item: CallRecord, index: ItemIndex) => void
+    getMockProperty?: (e: CallRecord) => { needMock?: boolean, mocked?: boolean },
+
+    onSelectChange?: (item: CallRecord, root: CallRecord, index: ItemIndex) => void
 }
 
 export default function (props: TraceListProps) {
     // filters
     const [showErrOnly, setShowErrOnly] = useState(false)
     const [showMockOnly, setShowMockOnly] = useState(false)
+
+
+    const debugKey = false
+    let versionRef = useRef(0)
+
+    // uncomment this to see if key causes problems
+    // expericent: list always causes problems
+    versionRef.current++
+
+    const getMockPropertyRef = useCurrent(props.getMockProperty)
 
     // id is stable
     const initItems = useMemo(() => {
@@ -68,7 +61,13 @@ export default function (props: TraceListProps) {
             record: e as CallRecord,
             children,
             leaf: !children?.length,
-            key: `${e.func}_${idx}`, // filled later
+            key: `${e.func}_${idx}${debugKey ? "_" + versionRef.current : ""}`, // will not change as long as records not change
+            // needMock:,
+            // mocked:
+            ...getMockPropertyRef?.current?.(e),
+            itemStyle: {
+                userSelect: "text"
+            }
         }))
         return items
     }, [props.records])
@@ -96,14 +95,19 @@ export default function (props: TraceListProps) {
         // update leaf based on children
         filter<CallRecordItem, CallRecordItem>(filterItems, e => {
             e.leaf = !e.children?.length
+            // e.key = e.key + `_${versionRef.current}`
+            e.key = debugKey ? e.key + `_${versionRef.current}` : e.key
             return true
         })
         setItems(filterItems)
-    }, [showErrOnly, showMockOnly])
+    }, [initItems, showErrOnly, showMockOnly])
 
-    // console.log("trace items:", items)
+    // console.log("trace items after filtered:", versionRef.current, items)
 
-    const [selectedController, setSelectedController] = useState<ItemController<CallRecordItem>>()
+    interface ItemControllerExt extends ItemController<CallRecordItem> {
+        clear?: () => void
+    }
+    const [selectedController, setSelectedController] = useState<ItemControllerExt>()
 
     // clear selected if it disappear
     useEffect(() => {
@@ -120,6 +124,23 @@ export default function (props: TraceListProps) {
         }
     }, [items])
 
+    const expandListController = useExpandListController<CallRecordItem>()
+    // update selected status if source changed
+    // const selectedControllerRef = useCurrent(selectedController)
+    // useEffect(() => {
+    //     const controller = selectedControllerRef.current
+    //     if (!controller) {
+    //         return
+    //     }
+    //     const item = expandListController.current?.getState(controller?.path)
+    //     if (!item) {
+    //         // clear selected
+    //         setSelectedController(undefined)
+    //         return
+    //     }
+    //     props.onSelectChange?.(item.record, controller.root?.record, controller.index)
+    // }, [initItems])
+
     return <div style={{
         border: "1px solid black",
         padding: "2px",
@@ -133,17 +154,12 @@ export default function (props: TraceListProps) {
             <VscCollapseAll onClick={() => {
                 toggleExpandRef.current?.()
             }} />
-            <div style={{ marginLeft: "4px", display: "flex", alignItems: "center" }}>
-                <input type="checkbox" checked={showErrOnly} onChange={e => setShowErrOnly(e.target.checked)} />
-                <span style={{ marginLeft: "2px" }}>Error</span>
-            </div>
-            <div style={{ marginLeft: "4px", display: "flex", alignItems: "center" }}>
-                <input type="checkbox" checked={showMockOnly} onChange={e => setShowMockOnly(e.target.checked)} />
-                <span style={{ marginLeft: "2px" }}>Mock</span>
-            </div>
+            <Checkbox label="Error" value={showErrOnly} onChange={setShowErrOnly} style={{ marginLeft: "4px" }} />
+            <Checkbox label="Mock" value={showMockOnly} onChange={setShowMockOnly} style={{ marginLeft: "4px" }} />
         </div>
         <ExpandList<CallRecordItem>
             items={items}
+            controllerRef={expandListController}
             initialAllExpanded={true}
             toggleExpandRef={toggleExpandRef}
             render={(item, controller) => <ItemRender
@@ -155,12 +171,18 @@ export default function (props: TraceListProps) {
                     }
                     // clear prev
                     if (selectedController) {
+                        selectedController.clear?.()
                         selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
                     }
-                    setSelectedController(controller)
+
+                    const clear = controller.subscribeUpdate((item) => {
+                        props.onSelectChange?.(item.record, controller.root?.record, controller.index)
+                    })
+
+                    setSelectedController({ ...controller, clear })
                     controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
 
-                    props.onSelectChange?.(item.record, controller.index)
+                    props.onSelectChange?.(item.record, controller.root?.record, controller.index)
                 }}
             />}
         />

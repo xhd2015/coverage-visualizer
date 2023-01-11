@@ -58,8 +58,12 @@ export async function applyDecoration(editor: monaco.editor.IStandaloneCodeEdito
     fileOpts.decorationsRes?.clear?.()
     fileOpts.decorationsRes = editor.createDecorationsCollection(fileOpts.decorations);
 }
-export async function getEditorModel(file: string, fileModels: { [file: string]: FileOptions }, fileDetailGetter: FileDetailGetter, contentDecorator: ContentDecorator, uriPrefix: string): Promise<FileOptions | null> {
-    console.log("getEditorModel file:", file)
+
+export interface Options {
+    readonly?: boolean
+}
+export async function getEditorModel(file: string, fileModels: { [file: string]: FileOptions }, fileDetailGetter: FileDetailGetter, contentDecorator: ContentDecorator, uriPrefix: string, opts?: Options): Promise<FileOptions | null> {
+    // console.log("getEditorModel file:", file)
 
     if (!file) {
         // no active file selected, clear content
@@ -73,44 +77,38 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
     if (!modelOpts) {
         modelOpts = {} as FileOptions
         fileModels[fileKey] = modelOpts
-        console.log("fileKey creating:", fileKey)
+        // console.log("fileKey creating:", fileKey)
 
         const resolving = new Promise(async (resolve, reject) => {
             const fd = await fileDetailGetter?.getDetail?.(file)
-            console.log("get file detail:", file, fd)
+            // console.log("get file detail:", file, fd)
             try {
+                let model: monaco.editor.ITextModel
                 if (!fd) {
-                    Object.assign(modelOpts, {
-                        file: file,
-                        fileKey: fileKey,
-                        model: monaco.editor.createModel(
-                            `cannot show content for ${file}`,
-                            "plaintext",
-                            monaco.Uri.file(fileKey)
-                        ),
-                        attachedToEditor: false,
-                        options: {
-                            readOnly: true,
-                        },
-                        exists: false
-                    })
+                    model = monaco.editor.createModel(
+                        `cannot show content for ${file}`,
+                        "plaintext",
+                        monaco.Uri.file(fileKey)
+                    )
                 } else {
-                    Object.assign(modelOpts, {
-                        file: file,
-                        fileKey: fileKey,
-                        model: monaco.editor.createModel(
-                            fd.content,
-                            fd.language,
-                            monaco.Uri.file(fileKey)
-                        ),
-                        attachedToEditor: false,
-                        options: {
-                            readOnly: true,
-                        },
-                        exists: true,
-                    })
-                    modelOpts.model.setValue(fd.content)
+                    const normContent = normalizeCodeContent(fd.content)
+                    model = monaco.editor.createModel(
+                        normContent,
+                        fd.language,
+                        monaco.Uri.file(fileKey)
+                    )
+                    model.setValue(normContent)
                 }
+                Object.assign(modelOpts, {
+                    file: file,
+                    fileKey: fileKey,
+                    attachedToEditor: false,
+                    options: {
+                        readOnly: opts?.readonly === undefined ? true : opts?.readonly,
+                    },
+                    exists: !!fd,
+                    model,
+                })
             } catch (e) {
                 console.error("create model error:", file, fileKey, e)
                 reject(e)
@@ -119,7 +117,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
 
             if (modelOpts.exists) {
                 modelOpts.decorations = (contentDecorator?.getFileDecorations && await contentDecorator?.getFileDecorations(file))
-                console.log("update decoration:", fileKey, modelOpts.decorations)
+                // console.log("update decoration:", fileKey, modelOpts.decorations)
             }
             resolve(null)
         })
@@ -127,19 +125,19 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
         modelOpts.resolving = resolving
         try {
             await resolving
-            console.log("fileKey resolved:", fileKey)
+            // console.log("fileKey resolved:", fileKey)
         } finally {
             modelOpts.resolving = null
         }
     } else if (modelOpts.resolving) {
-        console.log("fileKey resolving:", fileKey)
+        // console.log("fileKey resolving:", fileKey)
         // wait it resolve
         await modelOpts.resolving
     } else {
         // not resolving, so update decorations
         if (modelOpts.exists) {
             modelOpts.decorations = (contentDecorator?.getFileDecorations && await contentDecorator?.getFileDecorations(file))
-            console.log("update decoration:", fileKey, modelOpts.decorations)
+            // console.log("update decoration:", fileKey, modelOpts.decorations)
         }
     }
     return modelOpts
@@ -157,10 +155,13 @@ export interface modelProps {
 
     onWillDisposeModel?: () => void
 
+    readonly?: boolean
+
     // by default content is auto updated, unless
     // the external controller needs to sync between multiple models
     // disableAutoUpdateContent?: boolean
 }
+
 export function useMonacoModel(props: modelProps): FileOptions | null {
     const [model, setModel] = useState(null as FileOptions)
     const [cache, setCache] = useState({} as FileModels)
@@ -177,8 +178,10 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
             return
         }
 
-        const opts = await getEditorModel(props.file, cache, props.fileDetailGetter, props.contentDecorator, `${props.uriPrefix || ''}_v${fileGetterVersion}/`)
-        console.log("updating model:", props.uriPrefix, props.file, opts)
+        const opts = await getEditorModel(props.file, cache, props.fileDetailGetter, props.contentDecorator, `${props.uriPrefix || ''}_v${fileGetterVersion}/`,
+            { readonly: props.readonly }
+        )
+        // console.log("updating model:", props.uriPrefix, props.file, opts)
         setModel(opts)
         setModelVersion(modelVersion + 1)
         return
@@ -192,7 +195,7 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
             return
         }
         const decorations = cache[`${props.uriPrefix || ''}_v${fileGetterVersion}/` + props.file]
-        console.log("update decorations:", props.uriPrefix, fileGetterVersion, decorations)
+        // console.log("update decorations:", props.uriPrefix, fileGetterVersion, decorations)
         if (decorations) {
             applyDecoration(props.editor, decorations)
         }
@@ -217,12 +220,12 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
         // clean initial cache
         return () => Object.keys(cache).forEach(k => {
             cache[k].model?.dispose?.()
-            console.log("fileKey clean up at end initial:", k)
+            // console.log("fileKey clean up at end initial:", k)
         })
     }, [])
     // clearing caches
     useEffect(() => {
-        console.log("fileDetailGetter change to:", fileGetterVersion + 1)
+        // console.log("fileDetailGetter change to:", fileGetterVersion + 1)
         props.onWillDisposeModel?.()
         const newCache = {}
         setCache(newCache)
@@ -230,13 +233,35 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
         setModel(null)
 
         return () => {
-            console.log("fileKey clean up at end:", fileGetterVersion + 1)
+            // console.log("fileKey clean up at end:", fileGetterVersion + 1)
             Object.keys(newCache).forEach(k => {
                 newCache[k].model?.dispose?.()
-                console.log("fileKey clean up at end:", k)
+                // console.log("fileKey clean up at end:", k)
             })
         }
     }, [props.fileDetailGetter])
 
     return model
+}
+
+// vscode's editor.getModel().setValue(value)
+// these cases will cause vscode to throw "'factory.create' is not a function"
+//  1. undefined or null
+//  2. a plain object
+// so we here make a compitable value that will make vscode more stable
+export function normalizeCodeContent(content: string | Object | undefined): string {
+    if (content === null) {
+        return "null"
+    }
+    if (content === undefined) {
+        return "undefined"
+    }
+    if (typeof content === 'object') {
+        // TODO: this may not be safe
+        return JSON.stringify(content, null, "    ")
+    }
+    if (typeof content !== 'string') {
+        return String(content)
+    }
+    return content
 }

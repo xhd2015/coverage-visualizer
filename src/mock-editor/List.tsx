@@ -48,6 +48,22 @@ export interface ListItemsProps<T extends Item> extends ListProps<T> {
 }
 
 export function ListItems<T extends Item>(props: ListItemsProps<T>) {
+    // check keys
+    const checkKeys = true
+    if (checkKeys) {
+        const keys = {}
+        props.items?.forEach(e => {
+            if (e.key === undefined) {
+                console.error("WARNING item no key:", e.key)
+                return
+            }
+            if (keys[e.key]) {
+                console.error("WARNING duplicate key:", e.key)
+                return
+            }
+            keys[e.key] = true
+        })
+    }
     return <>{
         props.items?.map?.(item => <ListItem
             // !!!! a bug that needs to be noted here:

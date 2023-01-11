@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
+import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react"
 import { BsChevronDown, BsChevronRight } from "react-icons/bs"
 import { DispatchUpdate, Item, ItemIndex, ItemPath, List, SubscribeUpdate } from "./List"
 import { useCurrent } from "./react-hooks"
@@ -60,11 +60,22 @@ export type ExpandItemWrapper<T extends ExpandItem & { children?: T[] }> = {
 }
 
 export interface ItemController<T extends ExpandItem & { children?: T[] }> {
+    readonly item: T
+    readonly root?: T
     readonly path?: ItemPath
     readonly index?: ItemIndex
     readonly id?: number // unique id in memory
     readonly subscribeUpdate: SubscribeUpdate<T>
     readonly dispatchUpdate: DispatchUpdate<T>
+    // readonly children?: ItemController<T>[] // do we need this?
+}
+
+export interface ExpandListController<T extends ExpandItem & { children?: T[] }> {
+    getState: (path: ItemPath) => (T | undefined)
+    getController: (path: ItemPath) => ItemController<T>
+}
+export function useExpandListController<T extends ExpandItem & { children?: T[] }>(): MutableRefObject<ExpandListController<T>> {
+    return useRef<ExpandListController<T>>()
 }
 
 export interface ExpandListProps<T extends ExpandItem & { children?: T[] }> {
@@ -74,7 +85,11 @@ export interface ExpandListProps<T extends ExpandItem & { children?: T[] }> {
     initialAllExpanded?: boolean
     toggleExpandRef?: React.MutableRefObject<(expand?: boolean) => void>
 
+    mergeStatus?: (item: T, prev: T, path: ItemPath) => T
+
     onChange?: (item: T, path: ItemPath) => void
+
+    controllerRef?: MutableRefObject<ExpandListController<T>>
 
     // call this method when new session all some bug found
     // but in practice you can just ignore it, I'll explain
@@ -116,6 +131,8 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
 
     let idRef = useRef(1)
 
+    const mergeStatusRef = useCurrent(props.mergeStatus)
+
     const getState = (path: ItemPath): (InternalState<T> | undefined) => {
         let state = rootStatRef.current
         if (path) {
@@ -128,6 +145,16 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
             }
         }
         return state
+    }
+    if (props.controllerRef) {
+        props.controllerRef.current = {
+            getState(path) {
+                return getState(path)?.wrapper?.item
+            },
+            getController(path) {
+                return getState(path)?.wrapper?.controller
+            },
+        }
     }
 
     // checkDuplicate(props.items)
@@ -226,6 +253,8 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
                         const dispatchValue: T = updatedItem
                         wrapper.updateHandlers.forEach(e => e.handler(dispatchValue))
                         onChangeRef.current?.(dispatchValue, wrapper.path)
+
+                        Object.assign(state.wrapper.controller, { item: dispatchValue })
                     },
                     setExpanded: (expanded, all) => {
                         if (wrapper.item.leaf) {
@@ -251,18 +280,23 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
                     id: idRef.current++,
                     dispatchUpdate: wrapper.dispatchUpdate,
                     subscribeUpdate: wrapper.subscribeUpdate,
+                    root: root.item,
                 } as ItemController<T>)
                 state.wrapper = wrapper
             } else {
                 // update index
                 state.wrapper.parentIndex = i
                 state.wrapper.index = [...p.index, i]
-                Object.assign(state.wrapper.controller, { index: state.wrapper.index })
+                Object.assign(state.wrapper.controller, {
+                    index: state.wrapper.index,
+                    root,
+                })
             }
 
             // the calcItem is readonly
             const calcItem: T = {
-                ...item,
+
+                ...(mergeStatusRef.current ? mergeStatusRef.current(item, state.wrapper.item, state.wrapper.path) : item),
 
                 // always clear calc children because we will put calcItem into it
                 children: [],
@@ -276,8 +310,9 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
                     paddingLeft: "1em",
                     ...item?.listStyle,
                 },
-
             }
+            // update controller
+            Object.assign(state.wrapper.controller, { item: calcItem })
             // replace the item with calculated item
             state.wrapper.item = calcItem
             // remove update handlers?
@@ -350,6 +385,8 @@ export function ExpandListItemRender(props: ExpandListItemRenderProps) {
             setExpanded(item.expanded)
         })
     }, [])
+
+    useEffect(() => setItem(props.item), [props.item])
 
     return <div
         style={{

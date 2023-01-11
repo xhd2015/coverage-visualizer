@@ -1,10 +1,19 @@
 import { useEffect, useRef } from "react"
 
-export default function ColResizeBar() {
+
+const defaultBarColor = "#0000ff" // blue
+export interface ColResizeBarProps {
+    barColor?: string // defa
+
+    getTargetElement?: (bar: HTMLElement) => HTMLElement
+}
+
+// expect parent to have: position:relative
+export default function ColResizeBar(props: ColResizeBarProps) {
     const divRef = useRef<HTMLDivElement>()
     useEffect(() => {
         // console.log("attaching resize handler")
-        const detach = attachResizeHandlers(divRef.current)
+        const detach = attachResizeHandlers(divRef.current, props)
         return detach
     }, [])
     return <div style={{
@@ -20,42 +29,45 @@ export default function ColResizeBar() {
     ></div>
 }
 
-export function attachResizeHandlers(div: HTMLDivElement) {
+export function attachResizeHandlers(div: HTMLDivElement, props: ColResizeBarProps) {
     let pageX: number
-    let monacoContainerWidth: number;
-    let monacoContainer: HTMLElement;
+    let targetElementWidth: number;
+    let targetElement: HTMLElement;
 
     const onmousedown = function (e) {
         // console.log("mousedown:", e)
         // curCol = e.target.parentElement;
-        monacoContainer = (e.target as HTMLElement).parentElement.parentElement
+        targetElement = props?.getTargetElement ? props?.getTargetElement(e.target as HTMLElement) : (e.target as HTMLElement).parentElement.parentElement
+        if (!targetElement) {
+            return
+        }
         pageX = e.pageX;
 
-        var padding = paddingDiff(monacoContainer);
-        monacoContainerWidth = monacoContainer.offsetWidth - padding;
+        var padding = paddingDiff(targetElement);
+        targetElementWidth = targetElement.offsetWidth - padding;
     }
     const onmouseover = function (e) {
-        e.target.style.borderRight = '2px solid #0000ff';
+        e.target.style.borderRight = `2px solid ${props?.barColor || defaultBarColor}`;
     }
     const onmouseout = function (e) {
         e.target.style.borderRight = '';
     }
     const onmousemove = function (e) {
         // console.log("mousemove:", e)
-        if (monacoContainer) {
+        if (targetElement) {
             var diffX = e.pageX - pageX;
 
             // const padding = paddingDiff(monacoContainer);
             // const monacoContainerWidth = monacoContainer.offsetWidth - padding;
-            const newWidth = (monacoContainerWidth + diffX) + 'px';
+            const newWidth = (targetElementWidth + diffX) + 'px';
             // console.log("moving:", monacoContainer, diffX, newWidth)
-            monacoContainer.style.width = (monacoContainerWidth + diffX) + 'px';
+            targetElement.style.width = (targetElementWidth + diffX) + 'px';
         }
     }
     const onmouseup = function (e) {
-        monacoContainer = undefined;
+        targetElement = undefined;
         pageX = undefined;
-        monacoContainerWidth = undefined
+        targetElementWidth = undefined
     }
 
     div.addEventListener('mousedown', onmousedown);
