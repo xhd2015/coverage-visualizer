@@ -14,6 +14,8 @@ import RadioGroup from "./support/RadioGroup";
 import { SchemaResult } from "./testing";
 import TextEditor from "./TextEditor";
 import { CallRecord } from "./trace-types";
+import { GoFileCode } from "react-icons/go"
+import { BsFileEarmarkCheck } from "react-icons/bs"
 
 export interface TraceItem {
     item: CallRecord;
@@ -187,12 +189,17 @@ export default function (props: MockEditorProps) {
             <div style={{ height: "50%", display: "flex", flexDirection: "column" }}>
                 <div style={{}}>
                     <div style={{ backgroundColor: "rgb(108 108 108)", color: "white" }}>Set Mock</div>
-                    <div style={{ marginLeft: "2px" }}><span style={{ marginRight: "2px" }}><strong>Pkg:</strong></span>
+                    <div style={{ marginLeft: "2px" }}>
+                        <span style={{ marginRight: "2px" }}><strong>Pkg:</strong></span>
                         <span style={{ color: "#777777", userSelect: "text" }}>{selectedItem?.item?.pkg}</span>
                     </div>
-                    <div style={{ marginLeft: "2px" }}><span style={{ marginRight: "2px" }}><strong>Func:</strong></span>
+                    <div style={{ marginLeft: "2px" }}>
+                        <span style={{ marginRight: "2px" }}><strong>Func:</strong></span>
                         <span style={{ color: "#777777", userSelect: "text" }}>{selectedItem?.item?.func}</span>
-                        {selectedItem?.item?.func && <CopyClipboard text={selectedItem?.item?.func} />}
+                        {selectedItem?.item?.func && <>
+                            <CopyClipboard text={selectedItem?.item?.func} />
+                            <CopyClipboard copyIcon={GoFileCode} copiedIcon={BsFileEarmarkCheck} text={selectedItem?.item?.file ? `${selectedItem?.item?.file}:${selectedItem?.item?.line}` : ''} />
+                        </>}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-evenly" }}>
                         <RadioGroup<MockMode>

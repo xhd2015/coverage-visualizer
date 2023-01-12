@@ -146,6 +146,9 @@ export default function () {
                     if (!usedCaseData) {
                         return "not_run"
                     }
+                    if (usedCaseData.Skip) {
+                        return "skip"
+                    }
                     const resp = await demoAPI.requestTest({
                         method: item.method,
                         request: stringifyData(usedCaseData.Request),
