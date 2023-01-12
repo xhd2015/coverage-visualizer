@@ -128,22 +128,27 @@ export default function (props: MockEditorProps) {
             // height: "610px",
             height: "fit-content",
             minHeight: "400px",
-            maxHeight: "610px",
+            // maxHeight: "610px",
             userSelect: "none",
             ...props.style
             // justifyContent: 'center'
         }}
         onLeftResize={() => {
+            // console.log("leftResize")
             if (mockSetupEditorRef.current) {
+                // console.log("layout mockResp")
                 mockSetupEditorRef.current.layout()
             }
             if (traceEditorRef.current) {
+                // console.log("layout trace")
                 traceEditorRef.current.layout()
             }
             if (mockErrEditorRef.current) {
+                // console.log("layout mockErr")
                 mockErrEditorRef.current.layout()
             }
         }}
+        leftHeightMatchRight
         leftStyle={{ position: "relative" }}
         leftChild={<>
             <TraceList
@@ -237,7 +242,7 @@ export default function (props: MockEditorProps) {
                 <div style={{ backgroundColor: "#74a99b", color: "white" }}>Trace</div>
                 <div style={{ paddingBottom: "2px" }}>
                     <span style={{ fontWeight: "bold" }}>Status:</span> {
-                        (["Mock Response", "Mock Error", "No Mock"] as MockMode[]).map((e, i) => <>{i > 0 && '|'}<span style={{ fontWeight: e === traceMockMode && "bold" }}>{e}</span></>)
+                        (["Mock Response", "Mock Error", "No Mock"] as MockMode[]).map((e, i) => <span key={e}>{i > 0 && '|'}<span style={{ fontWeight: e === traceMockMode && "bold" }}>{e}</span></span>)
                     }
                 </div>
 

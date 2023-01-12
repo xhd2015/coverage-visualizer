@@ -80,7 +80,7 @@ export interface TestingEditorProps {
     mockEditor?: any
 
     onChange?: (conf: TestingCaseConfig) => void
-    onSave?: () => void
+    saveHandler?: () => Promise<void>
     onRequest?: () => void
 }
 
@@ -181,7 +181,15 @@ export default function (props: TestingEditorProps) {
                 <Button
                     className="testing-editor-button"
                     loading={saving}
-                    onClick={props.onSave}
+                    onClick={() => {
+                        if (!props.saveHandler) {
+                            return
+                        }
+                        setSaving(true)
+                        Promise.resolve(props.saveHandler?.()).then(() => {
+                            setModified(false)
+                        }).finally(() => setSaving(false))
+                    }}
                 > <span>{saving ? "Saving" : "Save"}{modified && "*"}</span></Button></div>
         </div>
         <div >

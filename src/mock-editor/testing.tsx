@@ -32,7 +32,6 @@ export function serializeMockData(data: MockData): MockData {
                 }
                 const respTrim = funcInfo.Resp.trimStart()
                 if (respTrim.startsWith("{") || respTrim.startsWith("[")) {
-                    console.log("found trim:", respTrim)
                     try {
                         funcInfo.Resp = JSON.parse(respTrim)
                     } catch (x) {
@@ -53,6 +52,7 @@ function mapObj<T, V extends Object>(o: V, fn: (v: T) => T): V {
 }
 
 export type RunStatus = "not_run" | "success" | "fail" | "error" | "running" | "skip";
+export const allStatus: RunStatus[] = ["success", "fail", "error", "skip", "running", "not_run"]
 
 // deprecated, use v2
 export interface TestingResponse {
@@ -109,8 +109,13 @@ export interface TestingRequestV2 {
     region: string
     env: string
 
-    request: any
+    request: string | Object
+
+    // deprecated, use mockData
     mock: string | Object
+
+    mockData?: string | Object // for localhost, 
+
     service: string
     method: string
     endpoint: string

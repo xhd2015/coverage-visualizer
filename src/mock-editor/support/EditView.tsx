@@ -21,6 +21,8 @@ export default function (props: EditableTextProps) {
         onChangeRef.current?.(value)
     }, [value])
 
+    useEffect(() => setValue(props.value), [props.value])
+
     return <div style={{ display: "flex", alignItems: "center" }}>{
         edit ? <input className={props.viewClassName} style={props.viewStyle} value={value} onChange={e => {
             setValue(e.target.value)

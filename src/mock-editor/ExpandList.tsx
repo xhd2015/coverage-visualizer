@@ -62,6 +62,7 @@ export type ExpandItemWrapper<T extends ExpandItem & { children?: T[] }> = {
 export interface ItemController<T extends ExpandItem & { children?: T[] }> {
     readonly item: T
     readonly root?: T
+    readonly parent?: ItemController<T>
     readonly path?: ItemPath
     readonly index?: ItemIndex
     readonly id?: number // unique id in memory
@@ -312,7 +313,7 @@ export default function ExpandList<T extends ExpandItem & { children?: T[] }>(pr
                 },
             }
             // update controller
-            Object.assign(state.wrapper.controller, { item: calcItem })
+            Object.assign(state.wrapper.controller, { item: calcItem, parent: p.controller })
             // replace the item with calculated item
             state.wrapper.item = calcItem
             // remove update handlers?

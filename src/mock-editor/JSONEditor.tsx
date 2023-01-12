@@ -12,8 +12,7 @@ export interface JSONEditorProps extends TextEditorProps {
 
 export default function (props: JSONEditorProps) {
     return <TextEditor
-        value={props.value}
-        onChange={props.onChange}
+        {...props}
         language={props.language || "json"}
         onEditorCreated={editor => {
             props.onEditorCreated?.(editor)
@@ -25,8 +24,6 @@ export default function (props: JSONEditorProps) {
             //     }
             // })
         }}
-        style={props.style}
-        readonly={props.readonly}
     />
 
 }

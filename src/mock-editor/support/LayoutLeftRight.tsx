@@ -14,25 +14,46 @@ export interface LayoutLeftRightProps {
     leftChild?: any
     rightChild?: any
 
+    leftHeightMatchRight?: boolean
+
     onLeftResize?: () => void
+    // onRightResize?: () => void
 }
 export default function (props: LayoutLeftRightProps) {
     const rootRef = useRef<HTMLDivElement>()
-    const traceListRootDivRef = useRef<HTMLDivElement>()
-    const mockContentRootDivRef = useRef<HTMLDivElement>()
+    const leftDivRef = useRef<HTMLDivElement>()
+    const rightDivRef = useRef<HTMLDivElement>()
 
     const onLeftResize = useCurrent(props.onLeftResize)
     useEffect(() => {
         const observer = new ResizeObserver(() => {
-            const rootWidth = rootRef.current.getBoundingClientRect().width
-            const traceListWidth = traceListRootDivRef.current.getBoundingClientRect().width
+            // why window.requestAnimationFrame?
+            // see https://stackoverflow.com/questions/49384120/resizeobserver-loop-limit-exceeded
+            window.requestAnimationFrame(() => {
+                const rootWidth = rootRef.current.getBoundingClientRect().width
+                const traceListWidth = leftDivRef.current.getBoundingClientRect().width
 
-            mockContentRootDivRef.current.style.width = (rootWidth - traceListWidth) + "px"
-            onLeftResize.current?.()
+                rightDivRef.current.style.width = (rootWidth - traceListWidth) + "px"
+                onLeftResize.current?.()
+            })
         })
-        observer.observe(traceListRootDivRef.current)
+        observer.observe(leftDivRef.current)
         return () => observer.disconnect() // unobserve all
     }, [])
+
+    useEffect(() => {
+        if (!props.leftHeightMatchRight) {
+            return
+        }
+        const observer = new ResizeObserver(() => {
+            window.requestAnimationFrame(() => {
+                const rightHeight = rightDivRef.current.getBoundingClientRect().height
+                leftDivRef.current.style.height = rightHeight + "px"
+            })
+        })
+        observer.observe(rightDivRef.current)
+        return () => observer.disconnect() // unobserve all
+    }, [props.leftHeightMatchRight])
 
     return <div style={{
         display: "flex",
@@ -42,7 +63,7 @@ export default function (props: LayoutLeftRightProps) {
         className={props.rootClassName}
         ref={rootRef}
     >
-        <div style={props.leftStyle} className={props.leftClassName} ref={traceListRootDivRef}>
+        <div style={props.leftStyle} className={props.leftClassName} ref={leftDivRef}>
             {props.leftChild}
         </div>
         <div style={{
@@ -51,7 +72,7 @@ export default function (props: LayoutLeftRightProps) {
             ...props.rightStyle,
         }}
             className={props.rightClassName}
-            ref={mockContentRootDivRef}
+            ref={rightDivRef}
         >
             {props.rightChild}
         </div>

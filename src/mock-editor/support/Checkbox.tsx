@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useState } from "react"
+import { CSSProperties, useEffect, useRef, useState } from "react"
 import { useCurrent } from "../react-hooks"
 
 
@@ -22,15 +22,21 @@ export default function (props: CheckboxProps) {
         changeRef.current?.(checked)
     }, [checked])
 
+    const inputRef = useRef<HTMLInputElement>()
+    const checkedRef = useCurrent(checked)
+    useEffect(() => {
+        inputRef.current.checked = checkedRef.current
+    }, [])
+
     return <div style={{
         display: "flex",
         alignItems: "center",
         flexWrap: "nowrap",
         ...props.style
     }} className={props.className} >
-        <input type="checkbox" checked={checked} onChange={e => {
+        <input type="checkbox" onChange={e => {
             setChecked(e.target.checked)
-        }} />
+        }} ref={inputRef} />
         <label
             style={{ marginLeft: "2px" }}
             onClick={() => {

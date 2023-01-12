@@ -1,7 +1,8 @@
 
 import { ItemPath } from "./List";
 import { RunStatus } from "./testing";
-import TestingList, { TestingAPI, TestingItem } from "./TestingList";
+import { TestingItem } from "./testing-api";
+import TestingList, { TestingAPI } from "./TestingList";
 import { throttle } from "./util/throttle";
 
 function randList<T>(list: T[]): T {
@@ -9,20 +10,20 @@ function randList<T>(list: T[]): T {
 }
 
 export const demoAPI: TestingAPI = {
-    delete: function (path: ItemPath): Promise<void> {
+    delete: function (item: TestingItem, path: ItemPath): Promise<void> {
         throw new Error("Function not implemented.");
     },
-    run: function (path: ItemPath): Promise<RunStatus> {
+    run: function (item: TestingItem, path: ItemPath): Promise<RunStatus> {
         // the API can be designed to have rate limit
         return new Promise((resolve) => {
             setTimeout(() => resolve(randList(["success", /* "fail", "error", "skip" */] as RunStatus[])), (1 + Math.random() * 3) * 1000)
         })
     },
-    duplicate: function (path: ItemPath): Promise<void> {
+    duplicate: function (item: TestingItem, path: ItemPath): Promise<void> {
         throw new Error("Function not implemented.");
     },
-    add: function (path: ItemPath): Promise<void> {
-        throw new Error("Function not implemented.");
+    add: async function (item: TestingItem, path: ItemPath): Promise<void> {
+
     }
 }
 

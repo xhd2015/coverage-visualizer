@@ -4,42 +4,31 @@ import { VscCollapseAll } from "react-icons/vsc"
 import ExpandList, { ExpandItem, ItemController, useExpandListController } from "./ExpandList"
 import { ItemIndex, ItemPath } from "./List"
 import { useCurrent } from "./react-hooks"
-import { filter, map } from "./tree"
+import { filter, map, traverse } from "./tree"
 
-import { AiOutlineExclamationCircle, AiOutlineCloseCircle, AiOutlineCheckCircle, AiOutlineClockCircle, AiOutlineMinusCircle, AiOutlinePlus } from "react-icons/ai"
+import { AiOutlineCheckCircle, AiOutlineClockCircle, AiOutlineCloseCircle, AiOutlineExclamationCircle, AiOutlineMinusCircle, AiOutlinePlus } from "react-icons/ai"
 import { BsCircle } from "react-icons/bs"
-import { RunStatus } from "./testing"
-import { Dropdown } from "./support/Dropdown"
+import { allStatus, RunStatus } from "./testing"
 
-import { VscPlay } from "react-icons/vsc"
-import { RiDeleteBin6Line } from "react-icons/ri"
 import { MdContentCopy } from "react-icons/md"
-import { throttle } from "./util/throttle"
+import { RiDeleteBin6Line } from "react-icons/ri"
+import { VscPlay } from "react-icons/vsc"
 import Checkbox from "./support/Checkbox"
+import { throttle } from "./util/throttle"
+import { TestingItem } from "./testing-api"
 
-
-export type TestingItemType = "dir" | "testSite" | "case"
-
-export interface TestingItem {
-    name: string
-    kind: TestingItemType
-    children?: TestingItem[]
-}
-
-const errorColor = "#DA2829"  // red
-const panicColor = "#ffb500"  // orange-like
-const defaultColor = "#19B7BE" // jaeger sea-blue
-const greyColor = "#97918B"
-const mockOkColor = "#6cc600" // green
-const mockMissingColor = "#000000" // black
 
 type StateCounters = Record<RunStatus, number>
 
+export interface Options {
+    parent: TestingItem
+    path: ItemPath
+}
 export interface TestingAPI {
-    add: (path: ItemPath) => Promise<void>
-    run: (path: ItemPath) => Promise<RunStatus>
-    duplicate: (path: ItemPath) => Promise<void>
-    delete: (path: ItemPath) => Promise<void>
+    add: (item: TestingItem, opts: Options) => Promise<void>
+    run: (item: TestingItem, opts: Options) => Promise<RunStatus>
+    duplicate: (item: TestingItem, opts: Options) => Promise<void>
+    delete: (item: TestingItem, opts: Options) => Promise<void>
 }
 
 interface TestingStatItem extends ExpandItem {
@@ -64,6 +53,9 @@ export interface TestingListProps {
     style?: CSSProperties
     getMockProperty?: (e: TestingItem) => { needMock?: boolean, mocked?: boolean },
     onSelectChange?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
+
+
+    onTreeChangeRequested?: () => void
 }
 
 export default function (props: TestingListProps) {
@@ -74,7 +66,7 @@ export default function (props: TestingListProps) {
     const getMockPropertyRef = useCurrent(props.getMockProperty)
 
     const apiRef = useCurrent(props.api)
-    const runLimited = useMemo(() => throttle((e: ItemPath) => apiRef.current?.run?.(e), props.runLimit), [props.runLimit])
+    const runLimited = useMemo(() => throttle((item: TestingItem, e: Options) => apiRef.current?.run?.(item, e), props.runLimit), [props.runLimit])
 
     const runLimitedRef = useCurrent(runLimited)
     const expandListController = useExpandListController<TestingStatItem>()
@@ -85,7 +77,7 @@ export default function (props: TestingListProps) {
         const items = map<TestingItem, TestingStatItem>(props.data, (e, children, idx, itemPath: string[]): TestingStatItem => {
             // merge with previous status
             return {
-                record: e as TestingItem,
+                record: e,
                 children,
                 leaf: !e.children?.length,
                 counters: {} as StateCounters,
@@ -96,6 +88,19 @@ export default function (props: TestingListProps) {
                 }
             }
         })
+        traverse(items, (e) => {
+        }, {
+            after(e, ctx, parentCtx, idx, path) {
+                if (e.record.kind === "case") {
+                    const prev = expandListController.current?.getState?.(path)
+                    // console.log("prev:", path, prev)
+                    e.counters = prev?.counters || { "not_run": 1 }
+                    return
+                }
+                [e.counters] = mergeChildrenCounters(e.children, child => child.counters)
+            },
+        })
+        // console.log("items:", items)
         return items
     }, [props.data])
 
@@ -175,7 +180,8 @@ export default function (props: TestingListProps) {
         if (item.record?.kind === "case") {
             controller.dispatchUpdate(item => ({ ...item, status: "running", counters: { running: 1 } }))
             notifyUpdate()
-            await runLimitedRef.current(controller.path).then((finalStatus) => {
+
+            await runLimitedRef.current(item.record, { parent: controller.parent?.record, path: controller.path }).then((finalStatus) => {
                 controller.dispatchUpdate(item => ({ ...item, status: finalStatus, counters: { [finalStatus]: 1 } }))
             }).catch((e) => {
                 controller.dispatchUpdate(item => ({ ...item, status: "error", counters: { "error": 1 } }))
@@ -184,11 +190,11 @@ export default function (props: TestingListProps) {
         } else {
             // reset all counters
             item.counters = {} as StateCounters
-            item.status = "not_run"
             if (!item.children?.length) {
                 // nothing to run
-                controller.dispatchUpdate(e => ({ ...e, ...item }))
-                return {}
+                controller.dispatchUpdate(e => ({ ...e, status: "success", counters: item.counters }))
+                notifyUpdate()
+                return
             }
             controller.dispatchUpdate(e => ({ ...e, status: "running", counters: item.counters }))
             item.status = "running"
@@ -198,16 +204,7 @@ export default function (props: TestingListProps) {
                 runItem(child, [...path, child.key], () => {
                     controller.dispatchUpdate(e => {
                         // range all children to get an up to date counters
-                        const newCounters: Partial<StateCounters> = {}
-                        let total = 0
-                        item.children?.forEach?.(chld => {
-                            const chldCnt = expandListController.current.getState([...path, chld.key]).counters
-                            Object.keys(chldCnt).forEach(k => {
-                                newCounters[k] = (newCounters[k] || 0) + chldCnt[k]
-                                total += newCounters[k]
-                            })
-                        })
-
+                        const [newCounters, total] = mergeChildrenCounters(item.children, (chld) => expandListController.current.getState([...path, chld.key]).counters)
                         let itemStatus: RunStatus = "success"
                         if (newCounters["running"]) {
                             itemStatus = "running"
@@ -229,11 +226,14 @@ export default function (props: TestingListProps) {
                     notifyUpdate()
                 }).catch((e) => {
                     console.error("update error:", e)
+                    notifyUpdate()
                 })
             })
         }
     }
 
+
+    // console.log("final items:", items)
     return <div style={{
         border: "1px solid black",
         padding: "2px",
@@ -256,10 +256,10 @@ export default function (props: TestingListProps) {
                 ...prevItem,
                 ...item,
                 status: prevItem?.status ?? "not_run",
-                counters: {
-                    ...prevItem?.counters,
-                    ...item?.counters,
-                },
+                // counters: item.record?.kind === "case" ? (prevItem?.counters || item?.counters) : {
+                //     ...prevItem?.counters,
+                //     ...item?.counters,
+                // },
             })}
             controllerRef={expandListController}
             initialAllExpanded={true}
@@ -267,7 +267,9 @@ export default function (props: TestingListProps) {
             render={(item, controller) => <ItemRender
                 item={item}
                 controller={controller}
+                api={props.api}
                 showMenu={selectedController?.id === controller.id || controller.path.length <= 1} // root or selected
+                onTreeChangeRequested={props.onTreeChangeRequested}
                 onClick={() => {
                     if (selectedController?.id === controller.id) {
                         return
@@ -294,6 +296,18 @@ export default function (props: TestingListProps) {
         />
     </div>
 }
+function mergeChildrenCounters(children: TestingStatItem[], getChildCounters: (chld: TestingStatItem) => Partial<StateCounters>): [Partial<StateCounters>, number] {
+    const newCounters: Partial<StateCounters> = {}
+    let total = 0
+    children?.forEach?.(chld => {
+        const chldCnt = getChildCounters(chld)
+        Object.keys(chldCnt || {}).forEach(k => {
+            newCounters[k] = (newCounters[k] || 0) + chldCnt[k]
+            total += newCounters[k]
+        })
+    })
+    return [newCounters, total]
+}
 
 export function ItemRender(props: {
     item: TestingStatItem, controller: ItemController<TestingStatItem>,
@@ -302,8 +316,9 @@ export function ItemRender(props: {
     showMenu?: boolean,
     api?: TestingAPI,
     onClickRun?: () => void,
+    onTreeChangeRequested?: () => void
 }) {
-    const { item, controller, api } = props
+    const { item, controller, api, onTreeChangeRequested } = props
     const isRoot = controller && controller.path.length <= 1
 
     const total = useMemo(() => getTotal(item.counters), [item.counters])
@@ -322,8 +337,11 @@ export function ItemRender(props: {
         onClick={props.onClick}
     >
         <RenderStatus status={item?.status} style={{}} />
-        <div style={{ whiteSpace: "nowrap", marginLeft: "2px" }}>{item.record.name}</div>
-        {item.record?.kind !== "case" && <RenderCounter counters={item.counters}
+        <div style={{ whiteSpace: "nowrap", marginLeft: "2px" }}>{item.record?.kind === "case" ? `[${item.record?.id}]: ${item.record?.name}` : item.record.name}</div>
+        {item.record?.kind !== "case" && <RenderCounter
+            status={item.status}
+            key={item.record.name}
+            counters={item.counters}
             style={{ marginLeft: "4px" }}
         />}
 
@@ -344,17 +362,29 @@ export function ItemRender(props: {
 
                 {
                     item.record?.kind === "testSite" && <AiOutlinePlus onClick={() => {
-                        api?.add?.(controller?.path)
+                        if (api?.add) {
+                            Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                onTreeChangeRequested?.()
+                            })
+                        }
                     }} />
                 }
                 {
                     item.record?.kind === "case" && <RiDeleteBin6Line onClick={() => {
-                        props.api?.delete?.(controller?.path)
+                        if (api?.delete) {
+                            Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                onTreeChangeRequested?.()
+                            })
+                        }
                     }} />
                 }
                 {
                     item.record?.kind === "case" && <MdContentCopy onClick={() => {
-                        props.api?.duplicate?.(controller?.path)
+                        if (api?.duplicate) {
+                            Promise.resolve(api?.duplicate?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                onTreeChangeRequested?.()
+                            })
+                        }
                     }} />
                 }
             </div>
@@ -409,22 +439,38 @@ const statusMapping: Record<RunStatus, { color: string, icon: FunctionComponent<
     },
 }
 
-const showStatus: RunStatus[] = ["success", "fail", "error", "skip", "running"]
+// const showStatus: RunStatus[] = ["success", "fail", "error", "skip", "running", "not_run"]
 export interface RenderCounterProps {
+    key?: string
     counters?: Partial<StateCounters>
+    status?: RunStatus
     style?: CSSProperties
 }
 export function RenderCounter(props: RenderCounterProps) {
-    const total = useMemo(() => getTotal(props.counters), [props.counters])
+    const [total, success, errOrFail, runningOrSkip] = useMemo(() => {
+        let success = props.counters?.["success"] || 0
+        let errOrFail = (props.counters?.["error"] || 0) + (props.counters?.["fail"] || 0)
+        let runningOrSkip = (props.counters?.["running"] || 0) + (props.counters?.["not_run"] || 0) + (props.counters?.["skip"] || 0)
+        return [success + errOrFail + runningOrSkip, success, errOrFail, runningOrSkip]
+    }, [props.counters])
 
-    return <small style={props.style}>
-        <small style={{ color: total > 0 ? "blue" : "grey" }}>
-            {total}/
+    const renderNum = (n: number, activeColor: string, appendSuffix?: boolean) => {
+        return <small style={{ color: n > 0 ? activeColor : "grey" }}>
+            {n}{appendSuffix !== false ? '/' : ''}
         </small>
+    }
+    return <small style={props.style}>
         {
-            showStatus.map((status, idx) => <small style={{ color: props.counters?.[status] > 0 ? statusMapping[status].color : "grey" }}>
-                {`${idx > 0 ? '/' : ''}${props.counters?.[status] || 0}`}
-            </small>)
+            renderNum(total, props?.status === "running" ? "blue" : "grey")
+        }
+        {
+            renderNum(success, statusMapping["success"]?.color)
+        }
+        {
+            renderNum(errOrFail, statusMapping["fail"]?.color)
+        }
+        {
+            renderNum(runningOrSkip, statusMapping["not_run"]?.color, false)
         }
     </small>
 }
@@ -435,7 +481,7 @@ function renderPercent(a, b) {
 
 function getTotal(counters?: Partial<StateCounters>): number {
     let total = 0
-    showStatus.forEach(status => {
+    allStatus.forEach(status => {
         total += counters?.[status] || 0
     })
     return total

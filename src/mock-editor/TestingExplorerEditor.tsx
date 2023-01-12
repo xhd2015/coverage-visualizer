@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import MockEditor, { MockData as MockEditorData, TraceItem } from "./MockEditor";
+import { useCurrent } from "./react-hooks";
 import { buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
 import { API } from "./testing-api";
 import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorControl } from "./TestingEditor";
 import "./TestingEditor.css";
+import { tryParse } from "./TestingExplorerEditorDemo";
 import { RootRecord } from "./trace-types";
 import { stringifyData, stringifyDataIndent } from "./util/format";
 
@@ -28,62 +30,114 @@ export interface ExtensionData {
 // 14. fix no end when panic
 // 15. fix assert error not effective
 
-export interface TestingExplorerProps {
-    api: API
+export interface TestingExplorerEditorControl {
+
 }
 
-export default function (props: TestingExplorerProps) {
+export function useTest(): MutableRefObject<TestingExplorerEditorControl> {
+    return useRef<TestingExplorerEditorControl>()
+}
 
+export interface TestingExplorerEditorProps {
+    caseName?: string
+    caseData?: TestingCase
+    mockInfo?: MockInfo
+
+    saveBeforeRequest?: boolean // default true
+
+    save?: (caseName: string, caseData: TestingCase) => Promise<void>
+    request?: (req: TestingRequestV2) => Promise<TestingResponseV2<ExtensionData>>
+
+    controlRef?: MutableRefObject<TestingExplorerEditorControl>
+    style?: CSSProperties;
+}
+
+export default function (props: TestingExplorerEditorProps) {
     const controllerRef = useRef<TestingEditorControl>()
 
     const [mockInfo, setMockInfo] = useState<MockInfo>()
+    const [data, setData] = useState<TestingCase>(props.caseData)
 
     const [selItem, setSelItem] = useState<TraceItem>()
 
-    const [data, setData] = useState<TestingCase>()
+    // const [name, setName] = useState(props.caseName)
+    const nameRef = useCurrent(props.caseName)
     const [respData, setRespData] = useState<TestingResponseV2<ExtensionData>>()
-    const config: TestingCaseConfig = useMemo((): TestingCaseConfig => {
+
+    const saveBeforeRequestRef = useCurrent(props.saveBeforeRequest)
+    const saveRef = useCurrent(props.save)
+
+    const [config, setConfig] = useState<TestingCaseConfig>()
+    useEffect(() => {
         if (!data && !respData) {
-            return undefined
+            return setConfig(undefined)
         }
-        return {
-            name: "loaded",
+        setConfig({
+            name: nameRef.current,
             request: stringifyDataIndent(data.Request),
             comment: data.Comment,
             skip: data.Skip,
             expectErr: !!data.AssertError,
             expectErrStr: data.AssertError,
-            expectResponse: !data.AssertError && stringifyDataIndent(data.Asserts),
-        }
+            expectResponse: !data.AssertError ? stringifyDataIndent(data.Asserts) : "",
+        })
     }, [data])
+    const configRef = useCurrent(config)
+
+    useEffect(() => {
+        setConfig(e => ({ ...e, name: props.caseName }))
+    }, [props.caseName])
 
     const mockCur = useRef(data?.Mock)
     useEffect(() => {
         mockCur.current = data?.Mock
     }, [data?.Mock])
 
+    const getCaseData = (): TestingCase => {
+        const config = configRef.current
+        return {
+            Request: tryParse(config.request),
+            Skip: config.skip,
+            Mock: serializeMockData(mockCur.current),
+            Asserts: config.expectErr ? undefined : tryParse(config.expectResponse) as TestingCase["Asserts"],
+            AssertError: config.expectErr ? config.expectErrStr : "",
+            Comment: config.comment,
+            AssertMockRecord: undefined,
+        }
+    }
+
     const result: TestingCaseResult = useMemo((): TestingCaseResult => {
         if (!respData) {
             return undefined
         }
 
+        let status: TestingCaseResult["status"]
+        if (respData?.AssertResult?.success) {
+            status = "pass"
+        } else if (!respData.AssertResult) {
+            status = "warning"
+        } else if (respData.Error) {
+            status = "fail"
+        }
+
         return {
             response: stringifyDataIndent(respData?.Response),
             responseError: respData?.Error,
-            status: respData?.Error ? "warning" : (respData?.AssertResult?.success ? "pass" : "fail"),
+            status: status,
             msg: respData?.Error ? respData?.Error : (respData?.AssertResult?.success ? "" : respData?.AssertResult?.fails?.[0]?.str)
         }
     }, [respData])
 
     // get the case
-    // ping localhost:16000 first
-    useEffect(() => {
-        props.api.loadCase().then(setData)
-    }, [])
+    // useEffect(() => {
+    //     props.api.loadCase().then(setData)
+    // }, [])
+    useEffect(() => setData(props.caseData), [props.caseData])
 
-    useEffect(() => {
-        props.api?.loadMockInfo().then(setMockInfo)
-    }, [])
+    // useEffect(() => {
+    //     props.api?.loadMockInfo().then(setMockInfo)
+    // }, [])
+    useEffect(() => setMockInfo(props.mockInfo), [props.mockInfo])
 
     const schemaMapping = useMemo(() => buildRespJSONSchemaMapping(mockInfo), [mockInfo])
     const respSchema = useMemo((): SchemaResult => {
@@ -95,21 +149,35 @@ export default function (props: TestingExplorerProps) {
     const callRecord = respData?.Extension?.Data?.trace
     const callRecordMemo = useMemo(() => callRecord?.root ? [callRecord?.root] : [], [callRecord])
 
+    const requestRef = useCurrent(props.request)
     return <TestingEditor
         config={config}
         result={result}
 
         controllerRef={controllerRef}
-        onRequest={() => {
+        onChange={config => {
+            setConfig(config)
+        }}
+        saveHandler={async () => {
+            if (saveBeforeRequestRef.current !== false && saveRef.current) {
+                await saveRef.current(configRef.current?.name, getCaseData())
+            }
+        }}
+        onRequest={async () => {
             if (controllerRef.current.requesting) {
+                return
+            }
+            if (saveBeforeRequestRef.current !== false && saveRef.current) {
+                await saveRef.current(configRef.current?.name, getCaseData())
+            }
+            if (!requestRef.current) {
                 return
             }
             // clear previous result
             setRespData(undefined)
             controllerRef.current.setRequesting(true)
             const config = controllerRef.current.config
-            props.api.requestTest<ExtensionData>({
-                method: "manager_core_v2/QueryUserInstalmentInfo/all_in_one",
+            requestRef.current?.({
                 request: config.request,
                 assertIsErr: config.expectErr,
                 assertError: config.expectErrStr,
@@ -122,19 +190,22 @@ export default function (props: TestingExplorerProps) {
                 controllerRef.current.setRequesting(false)
             })
         }}
-        header={
-            <div className="flex-center">
-                <div>
-                    <span>Package:</span><span>A</span>
-                </div>
-                <div style={{ marginLeft: "4px" }}>
-                    <span>Func:</span><span>B</span>
-                </div>
-            </div>
-        }
+        // header={
+        //     <div className="flex-center">
+        //         <div>
+        //             <span>Package:</span><span>A</span>
+        //         </div>
+        //         <div style={{ marginLeft: "4px" }}>
+        //             <span>Func:</span><span>B</span>
+        //         </div>
+        //     </div>
+        // }
         mockEditor={
             <MockEditor
-                style={{ width: "100%" }}
+                style={{
+                    width: "100%",
+                    ...props.style,
+                }}
                 callRecords={callRecordMemo}
                 onSelectChange={item => {
                     setSelItem(item)
