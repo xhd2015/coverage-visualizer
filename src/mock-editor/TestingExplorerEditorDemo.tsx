@@ -3,19 +3,15 @@ import { API } from "./testing-api";
 import TestingExplorerEditor from "./TestingExplorerEditor";
 import axios from "axios";
 
-const caseURL = 'http://10.12.208.244/api/testing/case/load?region=sg&env=test&service=credit-pricing-center&endpoint=localhost:16000&method=manager_core_v2%2FQueryUserInstalmentInfo%2Fall_in_one&id=31'
-
-// const schemaURL = "http://localhost:16000/api/mock/infoAll"
-const schemaURL = 'http://10.12.208.244/api/testing/mock/infoAll?endpoint=localhost:16000'
-// const testingURL = "http://10.12.208.244/api/testing/requestV2"
+const schemaURL = 'http://localhost:16000/api/mock/infoAll?endpoint=localhost:16000'
 const testingURL = "http://localhost:16000/api/endpoint/test"
 
 export const demoAPI: API = {
     loadMockInfo: function (): Promise<MockInfo> {
-        return axios(schemaURL).then(e => e.data);
+        return axios(schemaURL).then(e => e.data?.data);
     },
     loadCase: function (method: string, id: number): Promise<TestingCase> {
-        return axios(`http://10.12.208.244/api/testing/case/load?region=sg&env=test&service=credit-pricing-center&endpoint=localhost:16000&method=${method}&id=${id}`).then(e => e.data);
+        return axios(`http://localhost:16000/api/case/load?method=${method}&id=${id}`).then(e => e.data?.data);
     },
     saveCase: async function (method: string, id: number, name: string, caseData: TestingCase): Promise<void> {
         await axios({
@@ -26,7 +22,6 @@ export const demoAPI: API = {
                 id,
                 name,
                 data: capObj({ ...caseData }),
-
             }
         })
     },

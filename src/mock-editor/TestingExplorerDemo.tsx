@@ -10,14 +10,14 @@ import { ExtensionData } from "./TestingExplorerEditor";
 import { stringifyData } from "./util/format";
 import { Options } from "./TestingList";
 
-const listCaseURL = 'http://10.12.208.244/api/testing/case/listAll?endpoint=localhost:16000'
+const listCaseURL = 'http://localhost:16000/api/case/listAll'
 
 export default function () {
     const [testingItems, setTestingItems] = useState<TestingItem[]>()
 
     const refresh = () => {
         axios(listCaseURL).then(e => {
-            const resp: ListCaseResp = e.data
+            const resp: ListCaseResp = e.data?.data
             const item = buildTestingItem(resp.method_case_list)
             setTestingItems(item ? [item] : [])
         })
