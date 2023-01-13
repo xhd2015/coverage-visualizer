@@ -11,6 +11,7 @@ import { stringifyData } from "./util/format";
 import { Options } from "./TestingList";
 
 const listCaseURL = 'http://localhost:16000/api/case/listAll'
+const updateSummaryURL = 'http://localhost:16000/api/summary/update'
 
 export default function () {
     const [testingItems, setTestingItems] = useState<TestingItem[]>()
@@ -60,6 +61,32 @@ export default function () {
             style: {
                 // width: "400px",
                 // minHeight: "600px",
+            },
+            async onAllRan(counters) {
+                let total = 0
+                let fail = 0
+                let pass = 0
+                let skip = 0
+
+                Object.keys(counters || {}).forEach(k => {
+                    let val = counters[k] || 0
+                    total += val
+                    if (k === "fail" || k === "error") {
+                        fail += val
+                    } else if (k === "success") {
+                        pass += val
+                    } else {
+                        skip += val
+                    }
+                })
+                interface RunStat {
+                    total: number
+                    pass: number
+                    fail: number
+                    skip: number
+                }
+                const runStat: RunStat = { total, fail, pass, skip }
+                await axios({ url: updateSummaryURL, method: "POST", data: { runStat } })
             },
             runLimit: 10,
             api: {

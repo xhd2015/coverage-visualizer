@@ -54,6 +54,7 @@ export interface TestingListProps {
     getMockProperty?: (e: TestingItem) => { needMock?: boolean, mocked?: boolean },
     onSelectChange?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
 
+    onAllRan?: (counters?: StateCounters) => void
 
     onTreeChangeRequested?: () => void
 }
@@ -181,7 +182,7 @@ export default function (props: TestingListProps) {
             controller.dispatchUpdate(item => ({ ...item, status: "running", counters: { running: 1 } }))
             notifyUpdate()
 
-            await runLimitedRef.current(item.record, { parent: controller.parent?.record, path: controller.path }).then((finalStatus) => {
+            await runLimitedRef.current(item.record, { parent: controller.parent?.item?.record, path: controller.path }).then((finalStatus) => {
                 controller.dispatchUpdate(item => ({ ...item, status: finalStatus, counters: { [finalStatus]: 1 } }))
             }).catch((e) => {
                 controller.dispatchUpdate(item => ({ ...item, status: "error", counters: { "error": 1 } }))
@@ -290,7 +291,28 @@ export default function (props: TestingListProps) {
                     props.onSelectChange?.(item.record, controller.root?.record, controller.index)
                 }}
                 onClickRun={() => {
-                    runItem(item, controller.path, () => { })
+                    const isRoot = controller.path?.length <= 1
+                    let needCall = isRoot
+                    runItem(item, controller.path, () => {
+                        // get the update-to-date item
+                        const item = controller.item
+                        if (!needCall) {
+                            return
+                        }
+                        if (!isRoot) {
+                            return
+                        }
+                        // debug
+                        // if (item.key === "/_0") {
+                        //     console.log("item update:", controller.item)
+                        // }
+                        // root
+                        if (item.status === 'running' || item.status === 'not_run') {
+                            return
+                        }
+                        needCall = false
+                        props.onAllRan?.(item.counters as StateCounters)
+                    })
                 }}
             />}
         />
