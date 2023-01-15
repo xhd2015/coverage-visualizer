@@ -70,7 +70,7 @@ export default function (props: TestingExplorerEditorProps) {
     const [config, setConfig] = useState<TestingCaseConfig>()
     useEffect(() => {
         if (!data && !respData) {
-            return setConfig(undefined)
+            return setConfig({ name: nameRef.current })
         }
         setConfig({
             name: nameRef.current,
@@ -150,6 +150,33 @@ export default function (props: TestingExplorerEditorProps) {
     const callRecordMemo = useMemo(() => callRecord?.root ? [callRecord?.root] : [], [callRecord])
 
     const requestRef = useCurrent(props.request)
+    const requestHandler = async () => {
+        if (controllerRef.current.requesting) {
+            return
+        }
+        if (saveBeforeRequestRef.current !== false && saveRef.current) {
+            await saveRef.current(configRef.current?.name, getCaseData())
+        }
+        if (!requestRef.current) {
+            return
+        }
+        // clear previous result
+        setRespData(undefined)
+        controllerRef.current.setRequesting(true)
+        const config = controllerRef.current.config
+        requestRef.current?.({
+            request: config.request,
+            assertIsErr: config.expectErr,
+            assertError: config.expectErrStr,
+            asserts: config.expectResponse,
+            mock: stringifyData(serializeMockData(mockCur.current)), // serialize so that resp have correct type instead of raw string
+        } as TestingRequestV2
+        ).then((respData: TestingResponseV2<ExtensionData>) => {
+            setRespData(respData)
+        }).finally(() => {
+            controllerRef.current.setRequesting(false)
+        })
+    }
     return <TestingEditor
         config={config}
         result={result}
@@ -163,33 +190,7 @@ export default function (props: TestingExplorerEditorProps) {
                 await saveRef.current(configRef.current?.name, getCaseData())
             }
         }}
-        onRequest={async () => {
-            if (controllerRef.current.requesting) {
-                return
-            }
-            if (saveBeforeRequestRef.current !== false && saveRef.current) {
-                await saveRef.current(configRef.current?.name, getCaseData())
-            }
-            if (!requestRef.current) {
-                return
-            }
-            // clear previous result
-            setRespData(undefined)
-            controllerRef.current.setRequesting(true)
-            const config = controllerRef.current.config
-            requestRef.current?.({
-                request: config.request,
-                assertIsErr: config.expectErr,
-                assertError: config.expectErrStr,
-                asserts: config.expectResponse,
-                mock: stringifyData(serializeMockData(mockCur.current)), // serialize so that resp have correct type instead of raw string
-            } as TestingRequestV2
-            ).then((respData: TestingResponseV2<ExtensionData>) => {
-                setRespData(respData)
-            }).finally(() => {
-                controllerRef.current.setRequesting(false)
-            })
-        }}
+        onRequest={requestHandler}
         // header={
         //     <div className="flex-center">
         //         <div>
@@ -254,6 +255,7 @@ export default function (props: TestingExplorerEditorProps) {
                         Resp: data.mockMode === "Mock Error" ? "" : data.mockResp
                     } : undefined
                 }}
+                onClickDebug={requestHandler}
             />
         }
     />

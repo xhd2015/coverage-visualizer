@@ -3,6 +3,8 @@ import { CSSProperties, useEffect, useMemo, useState } from "react"
 import Code, { useCodeControl } from "../support/components/v2/Code"
 import { FileDetailGetter } from "../support/support/file"
 import { useCurrent } from "./react-hooks"
+import Popup from "./support/Popup"
+import { AiOutlineCloseCircle } from "react-icons/ai"
 
 
 export interface TextEditorProps {
@@ -22,41 +24,81 @@ export default function (props: TextEditorProps) {
     }, [])
 
     const [value, setValue] = useState(props.value)
+    const [expanded, setExpanded] = useState(false)
 
+    const valueRef = useCurrent(value)
     const controlRef = useCodeControl()
 
     // just return the initial value
     const fd = useMemo((): FileDetailGetter => {
         return {
             async getDetail(filename) {
-                return { content: props.value || "", language: props.language }
+                return { content: valueRef.current || "", language: props.language }
             },
         }
     }, [])
 
-    const valueRef = useCurrent(value)
     useEffect(() => {
         if (props.value !== valueRef.current) {
             controlRef.current?.setContent?.(props.value || "")
         }
     }, [props.value])
 
+    return <div id="debug">
+        <Code
+            containerStyle={{
+                height: "200px",
+                width: "100%",
+                ...props.style,
+            }}
+            file={codeID}
+            fileDetailGetter={fd}
+            onContentChange={(value) => {
+                setValue(value)
+                props.onChange?.(value)
+            }}
+            controlRef={controlRef}
+            readonly={!!props.readonly}
+            onEditorCreated={props.onEditorCreated}
+            editorRef={props.editorRef}
+            showExpandIcon
+            onClickExpand={() => {
+                setExpanded(!expanded)
+            }}
+        />{
+            expanded && <Popup>
+                <Code
+                    containerStyle={{
+                        width: "80%",
+                        marginTop: "100px",
+                        marginLeft: "auto",
+                        marginRight: "auto",
+                        height: "600px",
+                    }}
+                    file={`${codeID}_popup`}
+                    // initContent={value}
+                    fileDetailGetter={fd}
+                    readonly={!!props.readonly}
+                    onContentChange={(value) => {
+                        setValue(value)
 
-    return <Code
-        containerStyle={{
-            height: "200px",
-            width: "100%",
-            ...props.style,
-        }}
-        file={codeID}
-        fileDetailGetter={fd}
-        onContentChange={(value) => {
-            setValue(value)
-            props.onChange?.(value)
-        }}
-        controlRef={controlRef}
-        readonly={!!props.readonly}
-        onEditorCreated={props.onEditorCreated}
-        editorRef={props.editorRef}
-    />
+                        // propagate the value to the other side
+                        controlRef.current?.setContent?.(value)
+                        props.onChange?.(value)
+                    }}
+                    top={
+                        <div style={{
+                            backgroundColor: "black",
+                            display: "flex",
+                            justifyContent: "flex-end"
+                        }}>
+                            <AiOutlineCloseCircle style={{ cursor: "pointer", marginLeft: "auto", backgroundColor: "white" }} onClick={() =>
+                                setExpanded(false)
+                            } />
+                        </div>
+                    }
+                />
+            </Popup>
+        }
+    </div>
 }

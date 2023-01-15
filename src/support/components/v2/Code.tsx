@@ -3,10 +3,12 @@
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { CSSProperties, MutableRefObject, useEffect, useRef, useState } from "react";
 import { FileDetailGetter, ITreeNode } from "../../support/file";
+import { BiExpandAlt } from "react-icons/bi"
 
 import { useCurrent } from "../../../mock-editor/react-hooks";
 import { ContentDecorator, normalizeCodeContent, useMonacoModel } from "./model";
 
+import "./code.css"
 // import "../../monaco-tree/monaco-editor-v0.20.0/esm/vs/base/browser/ui/codiconLabel/codicon/codicon.css"
 // import "monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css"
 
@@ -80,6 +82,12 @@ export interface IProps {
 
     onEditorCreated?: (editor: monaco.editor.IStandaloneCodeEditor) => void
     onContentChange?: (content: string) => void
+
+    showExpandIcon?: boolean // true=>show expand,false=> show collapse, undefined don't show
+    onClickExpand?: () => void
+    top?: any // element on top
+
+    initContent?: string
 }
 
 export default function Code(props: IProps) {
@@ -152,8 +160,17 @@ export default function Code(props: IProps) {
             containerRef.current,
             {
                 readOnly: false,
+                scrollbar: {
+                    // see this, make scroll propagate to
+                    // parent possible:
+                    // https://github.com/microsoft/monaco-editor/issues/1853#issuecomment-593484147
+                    alwaysConsumeMouseWheel: false,
+                }
             }
         );
+        if (props.initContent !== undefined) {
+            editor.setValue(props.initContent)
+        }
 
         editor.onDidChangeModelContent(() => {
             if (onContentChangeRef.current) {
@@ -183,7 +200,21 @@ export default function Code(props: IProps) {
         }
     }, [])
 
-    return <div style={props.containerStyle} className={props.containerClassName}>
+    return <div style={{
+        position: "relative",
+        ...props.containerStyle
+    }} className={`code-container ${props.containerClassName || ""}`} >
+        {
+            props.showExpandIcon && <div className="code-container-zoom">
+                <BiExpandAlt style={{ cursor: "pointer" }} onClick={() => {
+                    props.onClickExpand?.()
+                }} />
+            </div>
+        }
+        {
+            props.top
+        }
+
         <div
             ref={containerRef}
             className="code-container"
@@ -193,5 +224,5 @@ export default function Code(props: IProps) {
                 overflow: "hidden",
             }}
         />
-    </div>
+    </ div>
 }

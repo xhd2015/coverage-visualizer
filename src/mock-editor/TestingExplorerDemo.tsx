@@ -41,6 +41,9 @@ export default function () {
             } else {
                 demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number).then(setCaseData)
             }
+        } else {
+            // clear data
+            setCaseData(undefined)
         }
     }, [curItem])
 

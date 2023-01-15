@@ -7,7 +7,18 @@
     margin-right: 1px;
 }
 
-
 .monaco-icon-label.has-children-checked .label-name {
     color: green
+}
+
+.code-container-zoom {
+    display: none;
+    position: absolute;
+    z-index: 1;
+    right: 0px;
+    background-color: transparent;
+}
+
+.code-container:hover .code-container-zoom {
+    display: block;
 }

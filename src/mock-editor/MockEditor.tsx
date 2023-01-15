@@ -16,6 +16,8 @@ import TextEditor from "./TextEditor";
 import { CallRecord } from "./trace-types";
 import { GoFileCode } from "react-icons/go"
 import { BsFileEarmarkCheck } from "react-icons/bs"
+import JSONEditor from "./JSONEditor";
+import { VscDebugAlt } from "react-icons/vsc"
 
 export interface TraceItem {
     item: CallRecord;
@@ -42,6 +44,8 @@ export interface MockEditorProps {
 
     style?: CSSProperties
     className?: string
+
+    onClickDebug?: () => void
 }
 
 type MockMode = "Mock Response" | "Mock Error" | "No Mock"
@@ -89,29 +93,25 @@ export default function (props: MockEditorProps) {
         }
     }, [calcMockData])
 
-    const traceFd = useMemo((): FileDetailGetter => {
-        return {
-            async getDetail(filename) {
-                let content: string = ""
-                let language
-                if (selectedRecord) {
-                    if (respMode === "Response") {
-                        if (selectedRecord.error) {
-                            content = "Error: " + selectedRecord.error
-                            language = "plaintext"
-                        } else {
-                            content = selectedRecord?.result ? JSON.stringify(selectedRecord?.result, null, "    ") : ""
-                            language = "json"
-                        }
-                    } else {
-                        // NOTE: JSON.stringify(undefined) returns undefined
-                        content = selectedRecord?.args ? JSON.stringify(selectedRecord?.args, null, "    ") : ""
-                        language = "json"
-                    }
+    const [traceContent, traceLang] = useMemo(() => {
+        let content: string = ""
+        let language
+        if (selectedRecord) {
+            if (respMode === "Response") {
+                if (selectedRecord.error) {
+                    content = "Error: " + selectedRecord.error
+                    language = "plaintext"
+                } else {
+                    content = selectedRecord?.result ? JSON.stringify(selectedRecord?.result, null, "    ") : ""
+                    language = "json"
                 }
-                return { content, language }
-            },
+            } else {
+                // NOTE: JSON.stringify(undefined) returns undefined
+                content = selectedRecord?.args ? JSON.stringify(selectedRecord?.args, null, "    ") : ""
+                language = "json"
+            }
         }
+        return [content, language]
     }, [selectedRecord, respMode])
 
     // // update selected item's 
@@ -190,7 +190,7 @@ export default function (props: MockEditorProps) {
             // flexGrow: undefined
         }}
         rightChild={<>
-            <div style={{ height: "50%", display: "flex", flexDirection: "column" }}>
+            <div style={{ height: "50%", display: "flex", flexDirection: "column", position: "relative" }}>
                 <div style={{}}>
                     <div style={{ backgroundColor: "rgb(108 108 108)", color: "white" }}>Set Mock</div>
                     <div style={{ marginLeft: "2px" }}>
@@ -247,6 +247,12 @@ export default function (props: MockEditorProps) {
                         }}
                     />
                 }
+                <div style={{ position: "absolute", bottom: "0" }}>
+                    <VscDebugAlt style={{ cursor: "pointer" }} onClick={() => {
+                        props.onClickDebug?.()
+                    }} />
+                </div>
+
             </div>
 
             <div style={{ height: "50%", marginTop: "10px", display: "flex", flexDirection: "column" }}>
@@ -263,14 +269,16 @@ export default function (props: MockEditorProps) {
                         value={respMode}
                         onChange={setRespMode}
                     /></div>
-                <Code
-                    containerStyle={{
+
+                <JSONEditor
+                    style={{
                         // flexGrow: "1"
                         height: "200px"
                     }}
-                    file="traceEditor"
+
                     editorRef={traceEditorRef}
-                    fileDetailGetter={traceFd}
+                    value={traceContent}
+                    language={traceLang}
                     readonly={true}
                 />
             </div>
