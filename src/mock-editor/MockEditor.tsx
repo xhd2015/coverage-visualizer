@@ -135,6 +135,7 @@ export default function (props: MockEditorProps) {
             ...props.style
             // justifyContent: 'center'
         }}
+        watchRootResize
         onLeftResize={() => {
             // console.log("leftResize")
             if (mockSetupEditorRef.current) {
@@ -185,6 +186,9 @@ export default function (props: MockEditorProps) {
                 }} />
         </>
         }
+        rightStyle={{
+            // flexGrow: undefined
+        }}
         rightChild={<>
             <div style={{ height: "50%", display: "flex", flexDirection: "column" }}>
                 <div style={{}}>

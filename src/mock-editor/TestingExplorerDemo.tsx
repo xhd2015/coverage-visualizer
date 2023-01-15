@@ -5,21 +5,21 @@ import { demoData, demoAPI as listDemoAPI } from "./TestingListDemo";
 import axios from "axios"
 import { traverse } from "./tree";
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
-import { buildTestingItem, ListCaseResp, TestingItem } from "./testing-api";
+import { AddCaseRequest, buildTestingItem, buildTestingItemV2, DeleteCaseRequest, ListCaseResp, TestingItem } from "./testing-api";
 import { ExtensionData } from "./TestingExplorerEditor";
 import { stringifyData } from "./util/format";
 import { Options } from "./TestingList";
 
-const listCaseURL = 'http://localhost:16000/api/case/listAll'
+const listCaseURL = 'http://localhost:16000/api/case/listAll?noCaseList=true'
 const updateSummaryURL = 'http://localhost:16000/api/summary/update'
 
 export default function () {
     const [testingItems, setTestingItems] = useState<TestingItem[]>()
 
     const refresh = () => {
-        axios(listCaseURL).then(e => {
+        axios({ url: listCaseURL, method: "GET" }).then(e => {
             const resp: ListCaseResp = e.data?.data
-            const item = buildTestingItem(resp.method_case_list)
+            const item = buildTestingItemV2(resp.root)
             setTestingItems(item ? [item] : [])
         })
     }
@@ -39,7 +39,7 @@ export default function () {
             if (!curItem) {
                 setCaseData(undefined)
             } else {
-                demoAPI.loadCase(curItem.method, curItem.id).then(setCaseData)
+                demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number).then(setCaseData)
             }
         }
     }, [curItem])
@@ -92,24 +92,12 @@ export default function () {
             api: {
                 ...listDemoAPI,
                 async duplicate(item, opts: Options) {
-                    interface AddCaseRequest {
-                        method: string
-                        id: number
-                        name: string
-                        data: Partial<TestingCase>
-                    }
-                    let id = 0
-                    if (opts?.parent?.children?.length) {
-                        for (let child of opts?.parent?.children) {
-                            if (child.id > id) {
-                                id = child.id
-                            }
-                        }
-                    }
+                    let id = maxID(opts?.parent?.children)
                     // TODO: get max id
                     let data: AddCaseRequest = {
-                        method: item.method,
+                        method: item.method || "",
                         id: id + 1,
+                        dir: item.path as string,
                         name: `${item.name} Copy`,
                         data: { ...caseData },
                     }
@@ -120,13 +108,11 @@ export default function () {
                     })
                 },
                 async delete(item, path) {
-                    interface DeleteCaseRequest {
-                        method: string
-                        id: number
-                    }
+                    console.log("del:", item)
                     let data: DeleteCaseRequest = {
-                        method: item.method,
-                        id: item.id,
+                        method: item.method as string,
+                        dir: item.path as string,
+                        id: item.id as number,
                     }
                     await axios({
                         url: "http://localhost:16000/api/case/delete",
@@ -135,25 +121,13 @@ export default function () {
                     })
                 },
                 async add(item, opts) {
-                    let id = 0
-                    if (item?.children?.length) {
-                        for (let child of item?.children) {
-                            if (child.id > id) {
-                                id = child.id
-                            }
-                        }
-                    }
+                    let id = maxID(item?.children)
                     const newData: Partial<TestingCase> = await axios({ url: "http://localhost:16000/api/case/make", params: { method: item.method } }).then(e => e?.data?.data)
-                    interface AddCaseRequest {
-                        method: string
-                        id: number
-                        name: string
-                        data: Partial<TestingCase>
-                    }
                     // TODO: get max id
                     let data: AddCaseRequest = {
-                        method: item.method,
+                        method: item.method as string,
                         id: id + 1,
+                        dir: item.path as string,
                         name: "TODO",
                         data: newData
                     }
@@ -168,7 +142,7 @@ export default function () {
                     if (item.method === curItem?.method && item.id === curItem?.id && item.name === curItem?.name && caseData) {
                         usedCaseData = caseData
                     } else {
-                        usedCaseData = await demoAPI.loadCase(item.method, item.id)
+                        usedCaseData = await demoAPI.loadCase(item.method as string, item.path as string, item.id as number)
                     }
                     if (!usedCaseData) {
                         return "not_run"
@@ -202,16 +176,29 @@ export default function () {
             mockInfo,
             caseData,
             async save(caseName, caseData: TestingCase) {
-                await demoAPI.saveCase(curItem.method, curItem.id, caseName, caseData)
+                await demoAPI.saveCase(curItem?.method as string, curItem?.path as string, curItem?.id as number, caseName, caseData).finally(() => {
+                    refresh()
+                })
             },
             async request(req: TestingRequestV2) {
                 if (!curItem?.method) {
                     return undefined
                 }
-                return demoAPI.requestTest({ ...req, method: curItem.method }).catch(e => {
+                const data: TestingResponseV2<ExtensionData> = await demoAPI.requestTest({ ...req, method: curItem.method }).catch(e => {
                     return { Error: e.message } as TestingResponseV2<ExtensionData>
-                })
+                }) as TestingResponseV2<ExtensionData>
+                return data
             },
         }}
     />
+}
+
+function maxID(children?: TestingItem[]): number {
+    let id = 0
+    for (let child of (children || [])) {
+        if ((child.id as number) > id) {
+            id = child.id as number
+        }
+    }
+    return id
 }

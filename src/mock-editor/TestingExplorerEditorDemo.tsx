@@ -10,10 +10,10 @@ export const demoAPI: API = {
     loadMockInfo: function (): Promise<MockInfo> {
         return axios(schemaURL).then(e => e.data?.data);
     },
-    loadCase: function (method: string, id: number): Promise<TestingCase> {
-        return axios(`http://localhost:16000/api/case/load?method=${method}&id=${id}`).then(e => e.data?.data);
+    loadCase: function (method: string, dir: string, id: number): Promise<TestingCase> {
+        return axios(`http://localhost:16000/api/case/load?method=${method}&id=${id}&dir=${dir}`).then(e => e.data?.data);
     },
-    saveCase: async function (method: string, id: number, name: string, caseData: TestingCase): Promise<void> {
+    saveCase: async function (method: string, dir: string, id: number, name: string, caseData: TestingCase): Promise<void> {
         await axios({
             url: "http://localhost:16000/api/case/update",
             method: "POST",
@@ -21,6 +21,7 @@ export const demoAPI: API = {
                 method,
                 id,
                 name,
+                dir,
                 data: capObj({ ...caseData }),
             }
         })

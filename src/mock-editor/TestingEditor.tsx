@@ -259,8 +259,9 @@ interface CommentEditorProps {
     onChange?: (value: string) => void
 }
 export function CommentEditor(props: CommentEditorProps) {
-    return <textarea style={{ borderColor: "#e1e0e0", width: "100%", }}
-        value={props.value}
+    return <textarea
+        style={{ borderColor: "#e1e0e0", width: "100%", }}
+        value={props.value || ""} // value can be undefined, in which case it is not passed to textarea
         onChange={e => {
             props.onChange?.(e.target.value)
         }}

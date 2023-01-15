@@ -17,6 +17,7 @@ import Checkbox from "./support/Checkbox"
 import { throttle } from "./util/throttle"
 import { TestingItem } from "./testing-api"
 
+import "./TestingList.css"
 
 type StateCounters = Record<RunStatus, number>
 
@@ -236,7 +237,7 @@ export default function (props: TestingListProps) {
 
     // console.log("final items:", items)
     return <div style={{
-        border: "1px solid black",
+        // border: "1px solid black",
         padding: "2px",
         overflowX: "auto",
         overflowY: "auto",
@@ -270,6 +271,7 @@ export default function (props: TestingListProps) {
                 controller={controller}
                 api={props.api}
                 showMenu={selectedController?.id === controller.id || controller.path.length <= 1} // root or selected
+                isRoot={controller.path.length <= 1}
                 onTreeChangeRequested={props.onTreeChangeRequested}
                 onClick={() => {
                     if (selectedController?.id === controller.id) {
@@ -336,6 +338,7 @@ export function ItemRender(props: {
     disableRun?: boolean
     onClick?: () => void,
     showMenu?: boolean,
+    isRoot?: boolean,
     api?: TestingAPI,
     onClickRun?: () => void,
     onTreeChangeRequested?: () => void
@@ -348,18 +351,20 @@ export function ItemRender(props: {
     const skipped = item.counters?.["skip"] || 0
     const success = item.counters?.["success"] || 0
 
-    return <div style={{
-        display: "flex",
-        cursor: "pointer",
-        alignItems: "center",
-        flexGrow: "1",
-        // flexWrap: "wrap", // don't wrap, let it x-scroll
-        ...item.contentStyle,
-    }}
+    return <div
+        className="testing-item"
+        style={{
+            display: "flex",
+            cursor: "pointer",
+            alignItems: "center",
+            flexGrow: "1",
+            // flexWrap: "wrap", // don't wrap, let it x-scroll
+            ...item.contentStyle,
+        }}
         onClick={props.onClick}
     >
         <RenderStatus status={item?.status} style={{}} />
-        <div style={{ whiteSpace: "nowrap", marginLeft: "2px" }}>{item.record?.kind === "case" ? `[${item.record?.id}]: ${item.record?.name}` : item.record.name}</div>
+        <div className="testing-item-name">{item.record?.kind === "case" ? `[${item.record?.id}]: ${item.record?.name}` : item.record.name}</div>
         {item.record?.kind !== "case" && <RenderCounter
             status={item.status}
             key={item.record.name}
@@ -367,50 +372,61 @@ export function ItemRender(props: {
             style={{ marginLeft: "4px" }}
         />}
 
-        {props.showMenu &&
-            // <Dropdown style={{ marginLeft: "auto" }} >
-            //     <div style={{ backgroundColor: "#f2f2f2", padding: "4px", borderRadius: "4px" }}>
-            //         <BsPlay />
-            //     </div>
-            // </Dropdown>
 
-            <div style={{ marginLeft: "auto", display: "flex", flexWrap: "nowrap", alignItems: 'center' }} >
-                {
-                    isRoot && <small style={{ marginLeft: "auto", marginRight: "4px" }}>
-                        {renderPercent(success, total - skipped)}/{renderPercent(success, total)}
-                    </small>
-                }
-                <VscPlay onClick={props.onClickRun} />
 
-                {
-                    item.record?.kind === "testSite" && <AiOutlinePlus onClick={() => {
-                        if (api?.add) {
-                            Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                                onTreeChangeRequested?.()
-                            })
-                        }
-                    }} />
-                }
-                {
-                    item.record?.kind === "case" && <RiDeleteBin6Line onClick={() => {
-                        if (api?.delete) {
-                            Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                                onTreeChangeRequested?.()
-                            })
-                        }
-                    }} />
-                }
-                {
-                    item.record?.kind === "case" && <MdContentCopy onClick={() => {
-                        if (api?.duplicate) {
-                            Promise.resolve(api?.duplicate?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                                onTreeChangeRequested?.()
-                            })
-                        }
-                    }} />
-                }
-            </div>
+        {
+            // always show, use hover to control
         }
+        <div
+            className="testing-item-menu"
+            style={{
+                marginLeft: "auto",
+                display: props.isRoot ? "flex" : undefined,
+                flexWrap: "nowrap", alignItems: 'center'
+            }} >
+            {
+                isRoot && <small style={{ marginLeft: "auto", marginRight: "4px" }}>
+                    {renderPercent(success, total - skipped)}/{renderPercent(success, total)}
+                </small>
+            }
+            <VscPlay onClick={(e) => {
+                e.stopPropagation()
+                props.onClickRun?.()
+            }} />
+
+            {
+                item.record?.kind === "testSite" && <AiOutlinePlus onClick={(e) => {
+                    e.stopPropagation()
+                    if (api?.add) {
+                        Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                            onTreeChangeRequested?.()
+                        })
+                    }
+                }} />
+            }
+            {
+                item.record?.kind === "case" && <RiDeleteBin6Line onClick={(e) => {
+                    console.log("e:", e)
+                    e.stopPropagation()
+                    if (api?.delete) {
+                        Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                            onTreeChangeRequested?.()
+                        })
+                    }
+                }} />
+            }
+            {
+                item.record?.kind === "case" && <MdContentCopy onClick={(e) => {
+                    e.stopPropagation()
+                    if (api?.duplicate) {
+                        Promise.resolve(api?.duplicate?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                            onTreeChangeRequested?.()
+                        })
+                    }
+                }} />
+            }
+        </div>
+
 
         {/* <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{item.name}</div> */}
         {/* {

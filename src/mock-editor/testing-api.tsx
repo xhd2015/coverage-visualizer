@@ -1,17 +1,62 @@
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing"
-import { traverse } from "./tree"
+import { map, traverse } from "./tree"
 
 
 export interface API {
     loadMockInfo: () => Promise<MockInfo>
-    loadCase: (method: string, id: number) => Promise<TestingCase>
-    saveCase: (method: string, id: number, name: string, caseData: TestingCase) => Promise<void>
+    loadCase: (method: string, dir: string, id: number) => Promise<TestingCase>
+    saveCase: (method: string, dir: string, id: number, name: string, caseData: TestingCase) => Promise<void>
     requestTest: <T>(req: TestingRequestV2) => Promise<TestingResponseV2<T>>
+}
+
+export interface APIV2 {
+    load: (req: LoadRequest) => TestingCase
+}
+
+export interface CaseDirRef {
+    method: string
+    dir: string
+}
+
+export interface CaseDef {
+    id: number
+    name: string
+}
+
+export interface CaseRef extends CaseDirRef {
+    id: number // when update, id never change
+}
+export interface LoadRequest extends CaseRef {
+
+}
+export interface AddCaseRequest extends CaseRef {
+    name: string
+    data: Partial<TestingCase>
+}
+
+export interface UpdateCaseRequest extends CaseRef {
+    name: string
+    data: Partial<TestingCase>
+}
+export interface DeleteCaseRequest extends CaseRef {
 }
 
 export interface ListCaseResp {
     method_case_list?: MethodCaseInfo[]
+    root?: Dir
 }
+export interface Dir {
+    name: string
+    path?: string
+    method?: string
+    caseList?: CaseDef[]
+    children?: Dir[]
+}
+export interface CaseDef {
+    id: number
+    name: string
+}
+
 export interface MethodCaseInfo {
     case_list?: MethodCase[]
     method: string
@@ -27,12 +72,49 @@ export interface TestingItem {
     name: string
     kind: TestingItemType
 
+    // path will be passed back to server
+    path?: string
+
     method?: string // for case
     id?: number // for case
 
     children?: TestingItem[]
 }
 
+export function buildTestingItemV2(root: Dir | undefined): TestingItem {
+    let rootItem: TestingItem = {
+        name: "/",
+        kind: "dir",
+        path: "",
+        children: [],
+    }
+    traverse<Dir, TestingItem>(root?.children || [], (e, p, ctx) => {
+        const method = e.method || p.method
+        let item: TestingItem = {
+            name: e.name,
+            kind: method ? "testSite" : "dir",
+            path: e.path,
+            method: method,
+            children: [],
+        }
+        p.children?.push(item)
+        return [item]
+    }, {
+        root: rootItem,
+        after(e, ctx, parentCtx, idx, path) {
+            e.caseList?.forEach?.(c => {
+                ctx.children?.push({
+                    name: c.name,
+                    id: c.id,
+                    kind: "case",
+                    method: ctx.method,
+                    path: ctx.path,
+                })
+            })
+        },
+    })
+    return rootItem
+}
 
 interface TestingItemBuild extends Omit<TestingItem, "children"> {
     childrenMapping?: { [key: string]: TestingItemBuild }
@@ -42,6 +124,7 @@ export function buildTestingItem(methods: MethodCaseInfo[]): TestingItem {
     let root: TestingItemBuild = {
         name: "/",
         kind: "dir",
+        path: "",
         children: [],
         childrenMapping: {},
     }

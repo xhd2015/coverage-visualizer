@@ -1,5 +1,6 @@
 import { CSSProperties } from "react";
 import ColResizeBar from "../support/components/v2/ColResizeBar";
+import { notifyRootResize } from "./context";
 import LayoutLeftRight from "./support/LayoutLeftRight";
 import { API } from "./testing-api";
 import TestingExplorerEditor, { TestingExplorerEditorProps } from "./TestingExplorerEditor";
@@ -18,9 +19,13 @@ export default function (props: TestingExplorerProps) {
             // height: "610px",
             height: "fit-content",
             minHeight: "400px",
-            maxHeight: "610px",
-            width: "80%",
+            // maxHeight: "610px",
+            width: "90%",
+            // overflow: "auto",
             userSelect: "none",
+            border: "1px solid lightgrey",
+            // borderTop: "1px solid lightgrey",
+            // borderTop: "1px solid lightgrey",
             ...props.style
             // justifyContent: 'center'
         }}
@@ -35,6 +40,7 @@ export default function (props: TestingExplorerProps) {
             // if (mockErrEditorRef.current) {
             //     mockErrEditorRef.current.layout()
             // }
+            notifyRootResize()
         }}
         leftHeightMatchRight
         leftStyle={{
@@ -45,19 +51,8 @@ export default function (props: TestingExplorerProps) {
         leftChild={<>
             <TestingList
                 {...props.listProps}
-                style={{
-                    height: "100%",
-                    // minHeight: "400px",
-                    // width: "fit-conent",
-                    width: "300px",
-                    border: "unset",
-                    overflowY: "auto",
-                    borderBottom: "1px solid lightgrey",
-                    marginRight: "10px",
-                    // maxHeight: "100%",
-                    // maxWidth: "300px",
-                    ...props.listProps?.style,
-                }}
+                className={`testing-list`}
+                style={props.listProps?.style}
             />
 
             <ColResizeBar
@@ -68,7 +63,10 @@ export default function (props: TestingExplorerProps) {
         </>
         }
         rightStyle={{
-            height: "fit-content"
+            height: "fit-content",
+            borderLeft: "unset",
+            padding: "1px",
+            paddingLeft: "2px",
         }}
         rightChild={
             <TestingExplorerEditor

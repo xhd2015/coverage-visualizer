@@ -1,4 +1,5 @@
-import { CSSProperties, useEffect, useRef } from "react"
+import { CSSProperties, useEffect, useRef, MutableRefObject } from "react"
+import { onRootResize } from "../context"
 import { useCurrent } from "../react-hooks"
 
 export interface LayoutLeftRightProps {
@@ -16,6 +17,8 @@ export interface LayoutLeftRightProps {
 
     leftHeightMatchRight?: boolean
 
+    // layoutRef?: MutableRefObject<(() => void) | undefined>
+    watchRootResize?: boolean
     onLeftResize?: () => void
     // onRightResize?: () => void
 }
@@ -24,9 +27,12 @@ export default function (props: LayoutLeftRightProps) {
     const leftDivRef = useRef<HTMLDivElement>()
     const rightDivRef = useRef<HTMLDivElement>()
 
+    const onInitRef = useCurrent(props.onInit)
+
+
     const onLeftResize = useCurrent(props.onLeftResize)
     useEffect(() => {
-        const observer = new ResizeObserver(() => {
+        const adjust = () => {
             // why window.requestAnimationFrame?
             // see https://stackoverflow.com/questions/49384120/resizeobserver-loop-limit-exceeded
             window.requestAnimationFrame(() => {
@@ -36,9 +42,21 @@ export default function (props: LayoutLeftRightProps) {
                 rightDivRef.current.style.width = (rootWidth - traceListWidth) + "px"
                 onLeftResize.current?.()
             })
-        })
+        }
+        let close = () => { }
+        if (props.watchRootResize) {
+            close = onRootResize(adjust)
+        }
+
+        // adjust immeidately on load
+        // adjust()
+
+        const observer = new ResizeObserver(adjust)
         observer.observe(leftDivRef.current)
-        return () => observer.disconnect() // unobserve all
+        return () => {
+            observer.disconnect() // unobserve all
+            close?.()
+        }
     }, [])
 
     useEffect(() => {

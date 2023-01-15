@@ -22,10 +22,15 @@ export default function (props: CheckboxProps) {
         changeRef.current?.(checked)
     }, [checked])
 
+    useEffect(() => {
+        inputRef.current.checked = !!props.value
+    }, [props.value])
+
     const inputRef = useRef<HTMLInputElement>()
     const checkedRef = useCurrent(checked)
+
     useEffect(() => {
-        inputRef.current.checked = checkedRef.current
+        inputRef.current.checked = !!checkedRef.current
     }, [])
 
     return <div style={{

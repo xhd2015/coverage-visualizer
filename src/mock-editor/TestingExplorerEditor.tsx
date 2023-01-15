@@ -46,7 +46,7 @@ export interface TestingExplorerEditorProps {
     saveBeforeRequest?: boolean // default true
 
     save?: (caseName: string, caseData: TestingCase) => Promise<void>
-    request?: (req: TestingRequestV2) => Promise<TestingResponseV2<ExtensionData>>
+    request?: (req: TestingRequestV2) => Promise<TestingResponseV2<ExtensionData> | undefined>
 
     controlRef?: MutableRefObject<TestingExplorerEditorControl>
     style?: CSSProperties;
@@ -97,7 +97,7 @@ export default function (props: TestingExplorerEditorProps) {
         const config = configRef.current
         return {
             Request: tryParse(config.request),
-            Skip: config.skip,
+            Skip: !!config.skip,
             Mock: serializeMockData(mockCur.current),
             Asserts: config.expectErr ? undefined : tryParse(config.expectResponse) as TestingCase["Asserts"],
             AssertError: config.expectErr ? config.expectErrStr : "",

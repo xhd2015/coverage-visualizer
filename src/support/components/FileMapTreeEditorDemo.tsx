@@ -54,8 +54,6 @@ enum Color {
   KEY = "#f0f0f0",
 }
 
-console.log("colors:", Object.keys(Color), Color)
-
 const extraFiles = ["main.go"];
 const fileInfoMap = {
   "debug.js": {

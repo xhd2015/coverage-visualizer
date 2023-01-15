@@ -1,0 +1,35 @@
+.testing-item {
+    position: relative;
+}
+
+.testing-item .testing-item-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    padding: 2px;
+    background-color: #F7F8FA;
+}
+
+.testing-item:hover .testing-item-menu {
+    display: flex;
+}
+
+.testing-list {
+    padding: 2px;
+    overflow: auto;
+    height: 100%;
+    /* width: 400px; */
+    /* for initial load*/
+    min-width: 300px;
+    width: fit-content;
+    border-right: 1px solid lightgrey;
+}
+
+/* set max width */
+.testing-item-name {
+    white-space: nowrap;
+    margin-left: 2px;
+    overflow: hidden;
+    max-width: 10em;
+    text-overflow: ellipsis;
+}
