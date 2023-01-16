@@ -13,10 +13,12 @@ TestingExplorer {
             List
         }
     }
-    TestingEditor {
-        MockEditor {
-            ExpandList {
-                List
+    TestinExplorerEditor{
+        TestingEditor {
+            MockEditor {
+                ExpandList {
+                    List
+                }
             }
         }
     }

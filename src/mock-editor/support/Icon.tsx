@@ -8,13 +8,14 @@ export interface IconProps {
     onClick?: () => void
     loading?: boolean
     style?: CSSProperties
+    rootStyle?: CSSProperties
 }
 
 export default function (props: IconProps) {
     // ${props.loading ? "mock-editor-loading-loader" : ""}
     return <>
         {
-            props.icon && <div style={{ display: "flex" }}>
+            props.icon && <div style={{ display: "flex", ...props.rootStyle }}>
                 {
                     createElement(props.icon, {
                         style: {

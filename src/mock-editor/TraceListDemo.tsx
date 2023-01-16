@@ -39,7 +39,6 @@ export default function (props: TraceListDemoProps) {
     return <TraceList
         records={props.callRecords || (callRecords as any as CallRecord[])}
         onSelectChange={(record, index) => {
-            console.log("select:", record, index)
             props.onSelectChange?.(record, index)
         }}
         style={{

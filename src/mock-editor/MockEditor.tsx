@@ -191,9 +191,11 @@ export default function (props: MockEditorProps) {
         }
         rightStyle={{
             // flexGrow: undefined
+            display: "flex",
+            flexDirection: "column"
         }}
         rightChild={<>
-            <div style={{ height: "50%", display: "flex", flexDirection: "column", position: "relative" }}>
+            <div style={{ /* height: "50%",  */display: "flex", flexDirection: "column", position: "relative" }}>
                 <div style={{}}>
                     <div style={{ backgroundColor: "rgb(108 108 108)", color: "white" }}>Set Mock</div>
                     <div style={{ marginLeft: "2px" }}>
@@ -252,6 +254,7 @@ export default function (props: MockEditorProps) {
                 }
                 <div style={{ position: "absolute", bottom: "0" }}>
                     <Icon icon={VscDebugAlt}
+                        rootStyle={{ "marginBottom": "2px" }}
                         disabled={props.disableDebug}
                         loading={props.debugging}
                         onClick={() => {
@@ -261,7 +264,7 @@ export default function (props: MockEditorProps) {
 
             </div>
 
-            <div style={{ height: "50%", marginTop: "10px", display: "flex", flexDirection: "column" }}>
+            <div style={{/*  height: "50%", marginTop: "10px", */ display: "flex", flexDirection: "column" }}>
                 <div style={{ backgroundColor: "#74a99b", color: "white" }}>Trace</div>
                 <div style={{ paddingBottom: "2px" }}>
                     <span style={{ fontWeight: "bold" }}>Status:</span> {

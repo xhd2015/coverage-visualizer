@@ -415,7 +415,6 @@ export function ItemRender(props: {
             }
             {
                 item.record?.kind === "case" && <RiDeleteBin6Line onClick={(e) => {
-                    console.log("e:", e)
                     e.stopPropagation()
                     if (api?.delete) {
                         Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {

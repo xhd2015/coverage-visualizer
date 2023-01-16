@@ -1,10 +1,4 @@
 
-import { editor } from "monaco-editor"
-import { CSSProperties, useEffect, useMemo, useState } from "react"
-import Code, { useCodeControl } from "../support/components/v2/Code"
-import { FileDetailGetter } from "../support/support/file"
-import { useCurrent } from "./react-hooks"
-import { SchemaResult } from "./testing"
 import TextEditor, { TextEditorProps } from "./TextEditor"
 
 export interface JSONEditorProps extends TextEditorProps {

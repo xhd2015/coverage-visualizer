@@ -15,6 +15,10 @@ export interface TextEditorProps {
     readonly?: boolean
     onEditorCreated?: (editor: editor.IStandaloneCodeEditor) => void
     editorRef?: React.MutableRefObject<editor.IStandaloneCodeEditor>
+
+    // when ever changed, we will call it
+    // on all editors
+    editorConfigurer?: (editor: editor.IStandaloneCodeEditor, created: boolean) => void
 }
 
 let codeId = 1
@@ -29,8 +33,18 @@ export default function (props: TextEditorProps) {
     const valueRef = useCurrent(value)
     const controlRef = useCodeControl()
 
+    const [editor, setEditor] = useState<editor.IStandaloneCodeEditor>()
+    const [popupEditor, setPopupEditor] = useState<editor.IStandaloneCodeEditor>()
+
     // just return the initial value
     const fd = useMemo((): FileDetailGetter => {
+        return {
+            async getDetail(filename) {
+                return { content: valueRef.current || "", language: props.language }
+            },
+        }
+    }, [])
+    const fdPopup = useMemo((): FileDetailGetter => {
         return {
             async getDetail(filename) {
                 return { content: valueRef.current || "", language: props.language }
@@ -44,7 +58,22 @@ export default function (props: TextEditorProps) {
         }
     }, [props.value])
 
-    return <div id="debug">
+    const editorConfigurerRef = useCurrent(props.editorConfigurer)
+    const editorRef = useCurrent(editor)
+    const popupEditorRef = useCurrent(popupEditor)
+    useEffect(() => {
+        if (!props.editorConfigurer) {
+            return
+        }
+        if (editorRef.current) {
+            props.editorConfigurer(editorRef.current, false)
+        }
+        if (popupEditorRef.current) {
+            props.editorConfigurer(popupEditorRef.current, false)
+        }
+    }, [props.editorConfigurer])
+
+    return <div>
         <Code
             containerStyle={{
                 height: "200px",
@@ -59,7 +88,13 @@ export default function (props: TextEditorProps) {
             }}
             controlRef={controlRef}
             readonly={!!props.readonly}
-            onEditorCreated={props.onEditorCreated}
+            onEditorCreated={e => {
+                props.onEditorCreated?.(e)
+                setEditor(e)
+
+                editorConfigurerRef.current?.(e, true)
+                e.onDidFocusEditorWidget(() => editorConfigurerRef.current?.(e, false))
+            }}
             editorRef={props.editorRef}
             showExpandIcon
             onClickExpand={() => {
@@ -77,13 +112,21 @@ export default function (props: TextEditorProps) {
                     }}
                     file={`${codeID}_popup`}
                     // initContent={value}
-                    fileDetailGetter={fd}
+                    fileDetailGetter={fdPopup}
                     readonly={!!props.readonly}
+                    onEditorCreated={e => {
+                        // editorConfigurerRef.current?.(editor, true)
+                        setPopupEditor(e)
+
+                        editorConfigurerRef.current?.(e, true)
+                        e.onDidFocusEditorWidget(() => editorConfigurerRef.current?.(e, false))
+                    }}
                     onContentChange={(value) => {
                         setValue(value)
 
                         // propagate the value to the other side
                         controlRef.current?.setContent?.(value)
+
                         props.onChange?.(value)
                     }}
                     top={
@@ -92,9 +135,10 @@ export default function (props: TextEditorProps) {
                             display: "flex",
                             justifyContent: "flex-end"
                         }}>
-                            <AiOutlineCloseCircle style={{ cursor: "pointer", marginLeft: "auto", backgroundColor: "white" }} onClick={() =>
+                            <AiOutlineCloseCircle style={{ cursor: "pointer", marginLeft: "auto", backgroundColor: "white" }} onClick={() => {
+                                // (window as any).DebugEditor = editorRef.current
                                 setExpanded(false)
-                            } />
+                            }} />
                         </div>
                     }
                 />

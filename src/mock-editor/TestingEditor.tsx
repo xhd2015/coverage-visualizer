@@ -266,20 +266,17 @@ export default function (props: TestingEditorProps) {
         </div>
 
 
-        <div >
-            <Button onClick={() => setShowConfirmDialog(true)}>click</Button>
-            <ConfirmDialog
-                title="Unsaved*"
-                msg="You have made changes, save or discard?"
-                confirmText="Save"
-                onDiscard={() => action?.()}
-                onConfirm={() => {
-                    doSave().then(action)
-                }}
-                show={showConfirmDialog}
-                onShow={setShowConfirmDialog}
-            />
-        </div>
+        <ConfirmDialog
+            title="Unsaved*"
+            msg="You have made changes, save or discard?"
+            confirmText="Save"
+            onDiscard={() => action?.()}
+            onConfirm={() => {
+                doSave().then(action)
+            }}
+            show={showConfirmDialog}
+            onShow={setShowConfirmDialog}
+        />
 
     </div>
 }

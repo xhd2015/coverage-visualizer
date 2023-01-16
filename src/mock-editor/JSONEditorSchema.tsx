@@ -4,7 +4,7 @@ import JSONEditor, { JSONEditorProps } from "./JSONEditor";
 import { SchemaResult } from "./testing";
 import * as monaco from "monaco-editor";
 import "./TestingEditor.css";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useCurrent } from "./react-hooks";
 
 
@@ -12,37 +12,47 @@ export interface JSONEditorSchemaProps extends JSONEditorProps {
     schema?: SchemaResult
 }
 
+
+// const jsonSchemas :{[key:string]: }= {}
+
 export default function (props: JSONEditorSchemaProps) {
     const editorRef = useRef<editor.IStandaloneCodeEditor>()
 
+    const replaceRef = useCurrent(props.schema?.replace)
+    const schemaRef = useCurrent(props.schema)
+
     // update schema
-    useEffect(() => {
-        const editor = editorRef.current
+    const editorConfigurer = useCallback((editor: editor.IStandaloneCodeEditor, created: boolean) => {
         if (!editor) {
             return
         }
-        const opts = buildDiagnosticOptions(true, props.schema?.schemas, editor.getModel()?.uri?.toString?.())
+        const opts = buildDiagnosticOptions(true, schemaRef.current?.schemas, editor.getModel()?.uri?.toString?.())
+        // console.log("on top schema A:", opts?.schemas?.[0]?.fileMatch)
         monaco.languages.json.jsonDefaults.setDiagnosticsOptions(opts);
+        addReplaceFilter(editor, replaceRef)
+        if (!created) {
+            return
+        }
+        editor.onDidChangeModel(m => {
+            if (!editor.getModel()) {
+                return
+            }
+            // model changed so update the option to match new one
+            const opts = buildDiagnosticOptions(true, schemaRef.current?.schemas, editor.getModel()?.uri?.toString?.())
+            // console.log("on top schema B:", opts?.schemas?.[0]?.fileMatch)
+            monaco.languages.json.jsonDefaults.setDiagnosticsOptions(opts);
+        })
     }, [props.schema?.schemas])
 
     if (props.editorRef) {
         props.editorRef.current = editorRef.current
     }
 
-    const schemaRef = useCurrent(props.schema)
-    const replaceRef = useCurrent(props.schema?.replace)
     return <JSONEditor
         {...props}
         editorRef={editorRef}
+        editorConfigurer={editorConfigurer}
         onEditorCreated={editor => {
-            const opts = buildDiagnosticOptions(true, props.schema?.schemas, editor.getModel()?.uri?.toString?.())
-            editor.onDidChangeModel(m => {
-                // model changed so update the option to match new one
-                const opts = buildDiagnosticOptions(true, schemaRef.current?.schemas, editor.getModel()?.uri?.toString?.())
-                monaco.languages.json.jsonDefaults.setDiagnosticsOptions(opts);
-            })
-            addReplaceFilter(editor, replaceRef)
-            monaco.languages.json.jsonDefaults.setDiagnosticsOptions(opts);
             props.onEditorCreated?.(editor)
         }}
     />
@@ -58,7 +68,7 @@ function buildDiagnosticOptions(validate: boolean, schemas: SchemaResult["schema
         validate,
         schemas: [
             {
-                ...schemas[0],
+                ...schemas?.[0],
                 fileMatch: [uriStr],
             },
             ...(schemas?.slice?.(1) || []),

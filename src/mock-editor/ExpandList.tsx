@@ -114,7 +114,6 @@ function debugCheckDuplicate(items: any[], prefix: string) {
 function debugCheckDuplicateChildren(items: any[], prefix: string) {
     const ids = {}
     items?.forEach?.(e => {
-        console.log("checking:", prefix, e.key)
         if (ids[e.key]) {
             console.log("found duplicate from source,prefix")
             debugger
@@ -400,7 +399,6 @@ export function ExpandListItemRender(props: ExpandListItemRenderProps) {
         {!item.leaf && (
             expanded !== false ? < BsChevronDown style={{ marginRight: "4px", ...iconStyle }}
                 onClick={() => {
-                    console.log("ExpandListItemRender click expanded false:", item.key, expanded)
                     setExpanded(false)
                 }}
             /> : <BsChevronRight style={{ marginRight: "4px", ...iconStyle }}

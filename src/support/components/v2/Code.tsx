@@ -90,6 +90,18 @@ export interface IProps {
     initContent?: string
 }
 
+// a global map: editor => config
+// if one is put on top, its value gets applied
+// editor does not interfere with others
+// put who on top
+function setEditorDiagnose(editor: monaco.editor.IStandaloneCodeEditor,) {
+
+}
+function setOnTop(editor: monaco.editor.IStandaloneCodeEditor) {
+
+}
+
+// Code as a central registry
 export default function Code(props: IProps) {
 
     const modelRefreshRef = useRef<() => any>()

@@ -128,7 +128,6 @@ export default function () {
                     })
                 },
                 async delete(item, path) {
-                    console.log("del:", item)
                     let data: DeleteCaseRequest = {
                         method: item.method as string,
                         dir: item.path as string,
