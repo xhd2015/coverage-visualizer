@@ -1,0 +1,5 @@
+.mock-editor-icon {}
+
+.mock-editor-icon.disabled {
+    color: #8d8c8c
+}

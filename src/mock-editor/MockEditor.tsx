@@ -18,6 +18,7 @@ import { GoFileCode } from "react-icons/go"
 import { BsFileEarmarkCheck } from "react-icons/bs"
 import JSONEditor from "./JSONEditor";
 import { VscDebugAlt } from "react-icons/vsc"
+import Icon from "./support/Icon"
 
 export interface TraceItem {
     item: CallRecord;
@@ -45,6 +46,8 @@ export interface MockEditorProps {
     style?: CSSProperties
     className?: string
 
+    disableDebug?: boolean
+    debugging?: boolean
     onClickDebug?: () => void
 }
 
@@ -248,9 +251,12 @@ export default function (props: MockEditorProps) {
                     />
                 }
                 <div style={{ position: "absolute", bottom: "0" }}>
-                    <VscDebugAlt style={{ cursor: "pointer" }} onClick={() => {
-                        props.onClickDebug?.()
-                    }} />
+                    <Icon icon={VscDebugAlt}
+                        disabled={props.disableDebug}
+                        loading={props.debugging}
+                        onClick={() => {
+                            props.onClickDebug?.()
+                        }} />
                 </div>
 
             </div>

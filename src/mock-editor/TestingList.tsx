@@ -58,6 +58,8 @@ export interface TestingListProps {
     onAllRan?: (counters?: StateCounters) => void
 
     onTreeChangeRequested?: () => void
+
+    checkBeforeSwitch?: (action: () => void) => void
 }
 
 export default function (props: TestingListProps) {
@@ -277,20 +279,27 @@ export default function (props: TestingListProps) {
                     if (selectedController?.id === controller.id) {
                         return
                     }
-                    // clear prev
-                    if (selectedController) {
-                        selectedController.clear?.()
-                        selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
-                    }
+                    const action = () => {
+                        // clear prev
+                        if (selectedController) {
+                            selectedController.clear?.()
+                            selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
+                        }
 
-                    const clear = controller.subscribeUpdate((item) => {
+                        const clear = controller.subscribeUpdate((item) => {
+                            props.onSelectChange?.(item.record, controller.root?.record, controller.index)
+                        })
+
+                        setSelectedController({ ...controller, clear })
+                        controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
+
                         props.onSelectChange?.(item.record, controller.root?.record, controller.index)
-                    })
-
-                    setSelectedController({ ...controller, clear })
-                    controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
-
-                    props.onSelectChange?.(item.record, controller.root?.record, controller.index)
+                    }
+                    if (!props.checkBeforeSwitch) {
+                        action()
+                        return
+                    }
+                    props.checkBeforeSwitch(action)
                 }}
                 onClickRun={() => {
                     const isRoot = controller.path?.length <= 1

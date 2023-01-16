@@ -7,6 +7,7 @@ import EditView from "./support/EditView";
 import Button from "./support/Button";
 import "./TestingEditor.css";
 import TextEditor from "./TextEditor";
+import { ConfirmDialog } from "./support/Dialog";
 
 export interface TestingCaseConfig {
     name: string
@@ -67,6 +68,8 @@ export interface TestingEditorControl {
 
     readonly requesting: boolean
     setRequesting: (requesting: boolean) => void
+
+    confirmOrDo: (action: () => void) => void
 }
 
 export interface TestingEditorProps {
@@ -101,6 +104,8 @@ function getResultHint(resultStatus: ResultStatus) {
 }
 export default function (props: TestingEditorProps) {
     const { config, result } = props
+
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
     const [name, setName] = useState<string>(config?.name ?? "TODO")
     const [skip, setSkip] = useState<boolean>(config?.skip)
@@ -145,11 +150,20 @@ export default function (props: TestingEditorProps) {
         setRequest(config?.request)
     }, [config])
 
+    const doSave = async () => {
+        if (!props.saveHandler) {
+            return
+        }
+        setSaving(true)
+        await (async () => props.saveHandler?.())().finally(() => setSaving(false))
+        setModified(false)
+    }
     // reset
     // useEffect(() => {
     //     setModified(false)
     // }, [props.initialValue])
 
+    const [action, setAction] = useState<() => void>()
     if (props.controllerRef) {
         props.controllerRef.current = {
             saving,
@@ -158,7 +172,14 @@ export default function (props: TestingEditorProps) {
             setRequesting,
             config: {
                 name, skip, comment, expectErr, expectErrStr, expectResponse, request
-            }
+            },
+            confirmOrDo(action) {
+                if (!modified) {
+                    return action()
+                }
+                setAction(() => action)
+                setShowConfirmDialog(true)
+            },
         }
     }
 
@@ -181,15 +202,7 @@ export default function (props: TestingEditorProps) {
                 <Button
                     className="testing-editor-button"
                     loading={saving}
-                    onClick={() => {
-                        if (!props.saveHandler) {
-                            return
-                        }
-                        setSaving(true)
-                        Promise.resolve(props.saveHandler?.()).then(() => {
-                            setModified(false)
-                        }).finally(() => setSaving(false))
-                    }}
+                    onClick={doSave}
                 > <span>{saving ? "Saving" : "Save"}{modified && "*"}</span></Button></div>
         </div>
         <div >
@@ -251,6 +264,23 @@ export default function (props: TestingEditorProps) {
             <div className="testing-editor-title">{"Mock & Trace"}</div>
             {props.mockEditor}
         </div>
+
+
+        <div >
+            <Button onClick={() => setShowConfirmDialog(true)}>click</Button>
+            <ConfirmDialog
+                title="Unsaved*"
+                msg="You have made changes, save or discard?"
+                confirmText="Save"
+                onDiscard={() => action?.()}
+                onConfirm={() => {
+                    doSave().then(action)
+                }}
+                show={showConfirmDialog}
+                onShow={setShowConfirmDialog}
+            />
+        </div>
+
     </div>
 }
 

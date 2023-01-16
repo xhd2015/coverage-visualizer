@@ -48,6 +48,8 @@ export interface TestingExplorerEditorProps {
     save?: (caseName: string, caseData: TestingCase) => Promise<void>
     request?: (req: TestingRequestV2) => Promise<TestingResponseV2<ExtensionData> | undefined>
 
+    pendingAction?: () => void
+
     controlRef?: MutableRefObject<TestingExplorerEditorControl>
     style?: CSSProperties;
 }
@@ -66,6 +68,12 @@ export default function (props: TestingExplorerEditorProps) {
 
     const saveBeforeRequestRef = useCurrent(props.saveBeforeRequest)
     const saveRef = useCurrent(props.save)
+
+    useEffect(() => {
+        if (props.pendingAction) {
+            controllerRef.current?.confirmOrDo?.(props.pendingAction)
+        }
+    }, [props.pendingAction])
 
     const [config, setConfig] = useState<TestingCaseConfig>()
     useEffect(() => {
@@ -150,6 +158,7 @@ export default function (props: TestingExplorerEditorProps) {
     const callRecordMemo = useMemo(() => callRecord?.root ? [callRecord?.root] : [], [callRecord])
 
     const requestRef = useCurrent(props.request)
+    const [requesting, setRequesting] = useState(false)
     const requestHandler = async () => {
         if (controllerRef.current.requesting) {
             return
@@ -163,6 +172,7 @@ export default function (props: TestingExplorerEditorProps) {
         // clear previous result
         setRespData(undefined)
         controllerRef.current.setRequesting(true)
+        setRequesting(true)
         const config = controllerRef.current.config
         requestRef.current?.({
             request: config.request,
@@ -175,6 +185,7 @@ export default function (props: TestingExplorerEditorProps) {
             setRespData(respData)
         }).finally(() => {
             controllerRef.current.setRequesting(false)
+            setRequesting(false)
         })
     }
     return <TestingEditor
@@ -255,6 +266,10 @@ export default function (props: TestingExplorerEditorProps) {
                         Resp: data.mockMode === "Mock Error" ? "" : data.mockResp
                     } : undefined
                 }}
+                debugging={requesting}
+                disableDebug={requesting}
+                // debugging={true}
+                // disableDebug={true}
                 onClickDebug={requestHandler}
             />
         }

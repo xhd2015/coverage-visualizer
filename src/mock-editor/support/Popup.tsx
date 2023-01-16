@@ -7,7 +7,7 @@ export interface PopupProps {
     children?: any
 }
 export default function (props: PopupProps) {
-    return <div className="mock-editor-popup-container">
+    return <div className="mock-editor-popup-container" style={props.style}>
         {
             props.children
         }

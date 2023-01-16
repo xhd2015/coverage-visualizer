@@ -51,6 +51,8 @@ export default function () {
         demoAPI.loadMockInfo().then(setMockInfo)
     }, [])
 
+    const [pendingAction, setPendingAction] = useState<() => void>()
+
     return <TestingExplorer
         style={{
             "marginLeft": "auto",
@@ -65,6 +67,21 @@ export default function () {
                 // width: "400px",
                 // minHeight: "600px",
             },
+            checkBeforeSwitch(action) {
+                setPendingAction(() => action)
+            },
+
+            //     const [show, setShow] = useState(false)
+            //     return <div >
+            //         <Button onClick={() => setShow(true)}>click</Button>
+
+            //         <ConfirmDialog title="shit" msg="shit" onDiscard={() => new Promise(resolve => setTimeout(resolve, 1 * 1000))}
+            //             show={show}
+            //             onShow={setShow}
+            //         />
+            //     </div>
+            // }
+
             async onAllRan(counters) {
                 let total = 0
                 let fail = 0
@@ -178,6 +195,7 @@ export default function () {
             caseName: curItem?.name,
             mockInfo,
             caseData,
+            pendingAction: pendingAction,
             async save(caseName, caseData: TestingCase) {
                 await demoAPI.saveCase(curItem?.method as string, curItem?.path as string, curItem?.id as number, caseName, caseData).finally(() => {
                     refresh()

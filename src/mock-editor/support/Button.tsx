@@ -1,5 +1,5 @@
 import { CSSProperties, useState } from "react"
-import "./Button.css"
+import "./Loading.css"
 
 export interface ButtonProps {
     disabled?: boolean
@@ -16,7 +16,7 @@ export interface ButtonProps {
 export default function (props: ButtonProps) {
     const [disabled, setDisabled] = useState(props.disabled)
     return <button
-        className={`${props.className || ""} ${props.loading ? "button--loading" : ""}`}
+        className={`${props.className || ""} ${props.loading ? "mock-editor-loading" : ""}`}
         style={props.style}
         disabled={props.loading || disabled}
         onClick={e => {
