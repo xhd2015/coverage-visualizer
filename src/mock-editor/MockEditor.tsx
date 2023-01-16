@@ -1,24 +1,22 @@
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
-import Code from "../support/components/v2/Code";
-import { FileDetailGetter } from "../support/support/file";
+import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useCurrent } from "./react-hooks";
 import TraceList from "./TraceList";
 
 import { editor } from "monaco-editor";
+import { BsFileEarmarkCheck } from "react-icons/bs";
+import { GoFileCode } from "react-icons/go";
+import { VscDebugAlt, VscJson, VscReply } from "react-icons/vsc";
 import ColResizeBar from "../support/components/v2/ColResizeBar";
+import JSONEditor from "./JSONEditor";
 import JSONEditorSchema from "./JSONEditorSchema";
 import { ItemIndex } from "./List";
 import CopyClipboard from "./support/CopyClipboard";
+import Icon from "./support/Icon";
 import LayoutLeftRight from "./support/LayoutLeftRight";
 import RadioGroup from "./support/RadioGroup";
 import { SchemaResult } from "./testing";
 import TextEditor from "./TextEditor";
 import { CallRecord } from "./trace-types";
-import { GoFileCode } from "react-icons/go"
-import { BsFileEarmarkCheck } from "react-icons/bs"
-import JSONEditor from "./JSONEditor";
-import { VscDebugAlt } from "react-icons/vsc"
-import Icon from "./support/Icon"
 
 export interface TraceItem {
     item: CallRecord;
@@ -29,6 +27,10 @@ export interface MockData {
     mockMode: MockMode;
     mockResp: string;
     mockErr: string;
+}
+
+export interface MockEditorControl {
+    notifyMockChanged: () => void
 }
 
 export interface MockEditorProps {
@@ -42,6 +44,24 @@ export interface MockEditorProps {
     checkNeedMock?: (e: CallRecord) => boolean
 
     respSchema?: SchemaResult
+
+    controlRef?: MutableRefObject<MockEditorControl>
+
+
+    // the all mock info
+    allMock?: string
+    // NOTE: if you changethe name to onSaveAllMock
+    // the click won't work, don't know why
+    // onAllMockSave?: (val: string) => void
+    onAllMockChange?: (val: string) => void
+    mockSchema?: SchemaResult
+
+    // must define this in parent, don't
+    // known why it won't working
+    // in child
+    mockInJSON?: boolean
+    onMockInJSONChange?: (v: boolean) => void
+    // onWillChangeMockInJSON
 
     style?: CSSProperties
     className?: string
@@ -57,6 +77,10 @@ type RespEditorOption = "Request" | "Response"
 export default function (props: MockEditorProps) {
     const [selectedItem, setSelectedItem] = useState<TraceItem>()
     const selectedRecord = selectedItem?.item
+
+    // const [mockInJSON, setMockInJSON] = useState(0)
+    // console.log("mockInJSON init:", mockInJSON)
+    const mockInJSON = props.mockInJSON
 
     const [mockData, setMockData] = useState<MockData>()
 
@@ -75,16 +99,21 @@ export default function (props: MockEditorProps) {
     }
 
     const getMockRef = useCurrent(props.getMock)
-    useEffect(() => {
-        onSelectChangeRef.current?.(selectedItem)
-        if (!selectedItem) {
-            return
-        }
+
+    const updateStatusRef = useCurrent((selectedItem: TraceItem) => {
         const record = getMockRef?.current?.(selectedItem)
         setMockData(record)
         setMockMode(record?.mockMode || "No Mock")
         setMockResp(record?.mockResp)
         setMockErr(record?.mockErr)
+    })
+
+    useEffect(() => {
+        onSelectChangeRef.current?.(selectedItem)
+        if (!selectedItem) {
+            return
+        }
+        updateStatusRef.current?.(selectedItem)
     }, [selectedItem])
 
     const onMockChangeRef = useCurrent(props.onMockChange)
@@ -126,6 +155,14 @@ export default function (props: MockEditorProps) {
     const mockSetupEditorRef = useRef<editor.IStandaloneCodeEditor>()
     const mockErrEditorRef = useRef<editor.IStandaloneCodeEditor>()
     const traceEditorRef = useRef<editor.IStandaloneCodeEditor>()
+
+    if (props.controlRef) {
+        props.controlRef.current = {
+            notifyMockChanged() {
+                updateStatusRef.current(selectedItemRef.current)
+            },
+        }
+    }
 
     return <LayoutLeftRight
         rootStyle={{
@@ -211,55 +248,96 @@ export default function (props: MockEditorProps) {
                         </>}
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-evenly" }}>
-                        <RadioGroup<MockMode>
-                            options={["Mock Response", "Mock Error", "No Mock"]}
-                            value={mockMode || "No Mock"}
-                            onChange={setMockMode}
-                        /></div>
+                        {
+                            !mockInJSON && <RadioGroup<MockMode>
+                                options={["Mock Response", "Mock Error", "No Mock"]}
+                                value={mockMode || "No Mock"}
+                                onChange={setMockMode}
+
+                            />
+                        }
+                        {
+                            mockInJSON && <div>Mock Editor</div>
+                        }
+                    </div>
                 </div>
-                {
-                    mockMode === "No Mock" && <div style={{ height: "200px" }}></div>
-                }
-                {
-                    mockMode === "Mock Response" && <JSONEditorSchema
-                        style={{
-                            height: "200px"
-                        }}
-                        value={mockResp}
-                        editorRef={mockErrEditorRef}
-                        onChange={value => {
-                            setMockResp(value)
-                        }}
-                        schema={props.respSchema}
-                    />
-                }
-                {
-                    mockMode === "Mock Error" && <TextEditor
-                        style={{
-                            // TODO: here
-                            //  when using flexGrow instead of height
-                            //  the editor will flash on redraw, making it hard to use
-                            // reproduce step: 1.comment flexGrow and comment height in and in the next Code element
-                            //  2. select Mock to see the effect
-                            //
-                            // flexGrow: "1",
-                            height: "200px"
-                        }}
-                        value={mockErr}
-                        editorRef={mockSetupEditorRef}
-                        onChange={value => {
-                            setMockErr(value)
-                        }}
-                    />
-                }
-                <div style={{ position: "absolute", bottom: "0" }}>
-                    <Icon icon={VscDebugAlt}
-                        rootStyle={{ "marginBottom": "2px" }}
-                        disabled={props.disableDebug}
-                        loading={props.debugging}
-                        onClick={() => {
-                            props.onClickDebug?.()
-                        }} />
+                <div style={{ position: "relative", height: "fit-content" }}>
+                    {
+                        mockInJSON && <JSONEditorSchema
+                            style={{
+                                height: "200px"
+                            }}
+                            key="mockInJSON"
+                            value={props.allMock}
+                            // editorRef={allMockEditorRef}
+                            onChange={props.onAllMockChange}
+                            schema={props.mockSchema}
+                        />
+                    }
+                    {
+                        !mockInJSON && <>
+                            {
+                                mockMode === "No Mock" && <div style={{ height: "200px" }}
+                                    key="noMock"></div>
+                            }
+                            {
+                                mockMode === "Mock Response" && <JSONEditorSchema
+                                    style={{
+                                        height: "200px"
+                                    }}
+                                    key="mockResponse"
+                                    value={mockResp}
+                                    editorRef={mockErrEditorRef}
+                                    onChange={value => {
+                                        setMockResp(value)
+                                    }}
+                                    schema={props.respSchema}
+                                />
+                            }
+                            {
+                                mockMode === "Mock Error" && <TextEditor
+                                    style={{
+                                        // TODO: here
+                                        //  when using flexGrow instead of height
+                                        //  the editor will flash on redraw, making it hard to use
+                                        // reproduce step: 1.comment flexGrow and comment height in and in the next Code element
+                                        //  2. select Mock to see the effect
+                                        //
+                                        // flexGrow: "1",
+                                        height: "200px"
+                                    }}
+                                    key="mockErr"
+                                    value={mockErr}
+                                    editorRef={mockSetupEditorRef}
+                                    onChange={value => {
+                                        setMockErr(value)
+                                    }}
+                                />
+                            }
+                        </>
+                    }
+                    {/* toolbar */}
+                    <div style={{ position: "absolute", top: "0", marginLeft: "2px" }}>
+                        <Icon
+                            icon={mockInJSON ? VscReply : VscJson}
+                            // icon={VscJson}
+                            key="A"
+                            rootStyle={{ "marginBottom": "2px" }}
+                            onClick={() => {
+                                // console.log("mockInJSON:", mockInJSON)
+                                props.onMockInJSONChange?.(mockInJSON)
+                            }} />
+                        <Icon
+                            key="B"
+                            icon={VscDebugAlt}
+                            rootStyle={{ "marginBottom": "2px" }}
+                            disabled={props.disableDebug}
+                            loading={props.debugging}
+                            onClick={() => {
+                                props.onClickDebug?.()
+                            }} />
+                    </div>
+
                 </div>
 
             </div>

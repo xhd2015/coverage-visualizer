@@ -156,7 +156,11 @@ export default function Code(props: IProps) {
     if (props.controlRef) {
         props.controlRef.current = {
             setContent: (content) => {
-                editor.getModel().setValue(normalizeCodeContent(content))
+                console.log("set content:", content)
+                const c = normalizeCodeContent(content)
+                editor.setValue(c)
+                // setTimeout(() => editor.setValue(c), 20)
+                // editor.getModel().setValue(normalizeCodeContent(content))
             }
         } as Control
     }

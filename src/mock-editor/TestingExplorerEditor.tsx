@@ -1,13 +1,14 @@
-import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import MockEditor, { MockData as MockEditorData, TraceItem } from "./MockEditor";
+import { CSSProperties, MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MockEditor, { MockData as MockEditorData, MockEditorControl, TraceItem } from "./MockEditor";
 import { useCurrent } from "./react-hooks";
-import { buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
+import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
 import { API } from "./testing-api";
 import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorControl } from "./TestingEditor";
 import "./TestingEditor.css";
 import { tryParse } from "./TestingExplorerEditorDemo";
 import { RootRecord } from "./trace-types";
 import { stringifyData, stringifyDataIndent } from "./util/format";
+import { debounce } from "lodash"
 
 export interface ExtensionData {
     trace?: RootRecord
@@ -96,9 +97,10 @@ export default function (props: TestingExplorerEditorProps) {
         setConfig(e => ({ ...e, name: props.caseName }))
     }, [props.caseName])
 
-    const mockCur = useRef(data?.Mock)
+    // const mockCur = useRef(data?.Mock)
+    const mockRef = useRef(data?.Mock)
     useEffect(() => {
-        mockCur.current = data?.Mock
+        mockRef.current = data?.Mock
     }, [data?.Mock])
 
     const getCaseData = (): TestingCase => {
@@ -106,7 +108,7 @@ export default function (props: TestingExplorerEditorProps) {
         return {
             Request: tryParse(config.request),
             Skip: !!config.skip,
-            Mock: serializeMockData(mockCur.current),
+            Mock: serializeMockData(mockRef.current),
             Asserts: config.expectErr ? undefined : tryParse(config.expectResponse) as TestingCase["Asserts"],
             AssertError: config.expectErr ? config.expectErrStr : "",
             Comment: config.comment,
@@ -148,11 +150,36 @@ export default function (props: TestingExplorerEditorProps) {
     useEffect(() => setMockInfo(props.mockInfo), [props.mockInfo])
 
     const schemaMapping = useMemo(() => buildRespJSONSchemaMapping(mockInfo), [mockInfo])
+    const rootMockSchema = useMemo(() => buildJSONSchema(mockInfo), [mockInfo])
     const respSchema = useMemo((): SchemaResult => {
         const { pkg, func } = selItem?.item || {}
         const respSchema = schemaMapping?.[pkg]?.[func]
         return respSchema
     }, [schemaMapping, selItem])
+
+    const controlRef = useRef<MockEditorControl>()
+    const [allMock, setAllMock] = useState<string>()
+    const [mockJSON, setMockJSON] = useState(false)
+
+    const updateHandler = useCurrent((allMock: string) => {
+        // if all mock changed, propagate to underlying
+        const mockData: MockData = tryParse(allMock) as MockData
+        if (!mockData) {
+            return
+        }
+        const newMockData = serializeMockData(mockData)
+        mockRef.current = newMockData
+        // setMockData(newMockData)
+        // update
+    })
+
+    const updateMockJSON = useMemo(() => {
+        // TODO: use debounce
+        return debounce((allMock: string) => {
+            setAllMock(allMock)
+            updateHandler.current(allMock)
+        }, 2 * 100)
+    }, [])
 
     const callRecord = respData?.Extension?.Data?.trace
     const callRecordMemo = useMemo(() => callRecord?.root ? [callRecord?.root] : [], [callRecord])
@@ -179,7 +206,7 @@ export default function (props: TestingExplorerEditorProps) {
             assertIsErr: config.expectErr,
             assertError: config.expectErrStr,
             asserts: config.expectResponse,
-            mock: stringifyData(serializeMockData(mockCur.current)), // serialize so that resp have correct type instead of raw string
+            mock: stringifyData(serializeMockData(mockRef.current)), // serialize so that resp have correct type instead of raw string
         } as TestingRequestV2
         ).then((respData: TestingResponseV2<ExtensionData>) => {
             setRespData(respData)
@@ -222,9 +249,26 @@ export default function (props: TestingExplorerEditorProps) {
                 onSelectChange={item => {
                     setSelItem(item)
                 }}
+                controlRef={controlRef}
                 respSchema={respSchema}
+                allMock={allMock}
+                onAllMockChange={updateMockJSON}
+                mockInJSON={mockJSON}
+                onMockInJSONChange={prevInJSON => {
+                    // immediately update
+                    if (!prevInJSON) {
+                        // changed from non mock to mock, setup initial content
+                        setAllMock(stringifyDataIndent(mockRef.current))
+                    } else {
+                        // changed from mock to no mock, notify change
+                        controlRef.current?.notifyMockChanged?.()
+                    }
+                    setMockJSON(!prevInJSON)
+                }}
+                // onAllMockSave={updateAllMock}
+                mockSchema={rootMockSchema}
                 getMock={(item) => {
-                    const mockItem = mockCur.current?.Mapping?.[item.item?.pkg]?.[item?.item?.func]
+                    const mockItem = mockRef.current?.Mapping?.[item.item?.pkg]?.[item?.item?.func]
                     if (!mockItem) {
                         return undefined
                     }
@@ -236,7 +280,7 @@ export default function (props: TestingExplorerEditorProps) {
                     }
                 }}
                 checkNeedMock={(e) => {
-                    const mockItem = mockCur.current?.Mapping?.[e?.pkg]?.[e?.func]
+                    const mockItem = mockRef.current?.Mapping?.[e?.pkg]?.[e?.func]
                     return !!mockItem
                 }}
                 onMockChange={(item, data) => {
@@ -244,14 +288,14 @@ export default function (props: TestingExplorerEditorProps) {
                     if (!pkg || !func) {
                         return
                     }
-                    if (!mockCur.current) {
-                        mockCur.current = {} as MockData
+                    if (!mockRef.current) {
+                        mockRef.current = {} as MockData
                     }
-                    if (!mockCur.current.Mapping) {
-                        mockCur.current.Mapping = {}
+                    if (!mockRef.current.Mapping) {
+                        mockRef.current.Mapping = {}
                     }
-                    mockCur.current.Mapping[pkg] = mockCur.current.Mapping[pkg] || {}
-                    mockCur.current.Mapping[pkg][func] = data && data.mockMode !== "No Mock" ? {
+                    mockRef.current.Mapping[pkg] = mockRef.current.Mapping[pkg] || {}
+                    mockRef.current.Mapping[pkg][func] = data && data.mockMode !== "No Mock" ? {
                         ...data,
                         ...({
                             // ignore these fields

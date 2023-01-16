@@ -19,6 +19,9 @@ export interface TextEditorProps {
     // when ever changed, we will call it
     // on all editors
     editorConfigurer?: (editor: editor.IStandaloneCodeEditor, created: boolean) => void
+
+    containerStyle?: CSSProperties
+    children?: any
 }
 
 let codeId = 1
@@ -26,7 +29,6 @@ export default function (props: TextEditorProps) {
     const codeID = useMemo(() => {
         return `code_editor_${codeId++}`
     }, [])
-
     const [value, setValue] = useState(props.value)
     const [expanded, setExpanded] = useState(false)
 
@@ -53,7 +55,7 @@ export default function (props: TextEditorProps) {
     }, [])
 
     useEffect(() => {
-        if (props.value !== valueRef.current) {
+        if (props.value !== valueRef.current && controlRef.current) {
             controlRef.current?.setContent?.(props.value || "")
         }
     }, [props.value])
@@ -73,7 +75,7 @@ export default function (props: TextEditorProps) {
         }
     }, [props.editorConfigurer])
 
-    return <div>
+    return <div style={props.containerStyle}>
         <Code
             containerStyle={{
                 height: "200px",
@@ -144,5 +146,9 @@ export default function (props: TextEditorProps) {
                 />
             </Popup>
         }
+        {
+            props.children
+        }
+
     </div>
 }

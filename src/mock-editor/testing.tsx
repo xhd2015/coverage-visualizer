@@ -226,7 +226,7 @@ export function buildJSONSchema(mockInfo: MockInfo): SchemaResult {
     // common prefix
     const pkgMapping: { [name: string]: Type } = {}
     const pkgMappingList: { [name: string]: Type } = {}
-    Object.keys(mockInfo.Stubs?.PkgMapping || {}).forEach(k => {
+    Object.keys(mockInfo?.Stubs?.PkgMapping || {}).forEach(k => {
         let use = k
         if (mainEllipses && k.startsWith(mainModule)) {
             use = mainEllipses + k.slice(mainModule.length)
@@ -281,7 +281,7 @@ export function buildJSONSchema(mockInfo: MockInfo): SchemaResult {
         },
     }
     schemas.push({ uri: rootType.uri || "", schema: rootType })
-    if (mockInfo.Types) {
+    if (mockInfo?.Types) {
         for (let k in mockInfo.Types) {
             const t = mockInfo.Types[k]
             schemas.push({ uri: t.uri || "", schema: t })

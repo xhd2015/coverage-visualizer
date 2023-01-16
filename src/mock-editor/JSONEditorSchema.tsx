@@ -29,10 +29,10 @@ export default function (props: JSONEditorSchemaProps) {
         const opts = buildDiagnosticOptions(true, schemaRef.current?.schemas, editor.getModel()?.uri?.toString?.())
         // console.log("on top schema A:", opts?.schemas?.[0]?.fileMatch)
         monaco.languages.json.jsonDefaults.setDiagnosticsOptions(opts);
-        addReplaceFilter(editor, replaceRef)
         if (!created) {
             return
         }
+        addReplaceFilter(editor, replaceRef) // exactly add once
         editor.onDidChangeModel(m => {
             if (!editor.getModel()) {
                 return
@@ -77,8 +77,8 @@ function buildDiagnosticOptions(validate: boolean, schemas: SchemaResult["schema
 }
 
 // addReplaceFilter replace short text with long text
-function addReplaceFilter(editor: editor.IStandaloneCodeEditor, editReplace: { current: (text: string) => string }) {
-    editor.onDidChangeModelContent((e) => {
+function addReplaceFilter(editor: editor.IStandaloneCodeEditor, editReplace: { current: (text: string) => string }): () => void {
+    const dispose = editor.onDidChangeModelContent((e) => {
         if (!editReplace.current) {
             return
         }
@@ -93,19 +93,27 @@ function addReplaceFilter(editor: editor.IStandaloneCodeEditor, editReplace: { c
         if (!newText) {
             return;
         }
-        setTimeout(() => {
-            editor.getModel().applyEdits([
-                {
-                    forceMoveMarkers: true,
-                    range: {
-                        ...ch.range,
-                        endColumn: ch.range.endColumn + ch.text.length,
-                    },
-                    text: newText,
+
+        // const oldValue = editor.getValue()
+        // const newValue = oldValue.slice(0, ch.rangeOffset) + newText + oldValue.slice(ch.rangeOffset + ch.text.length)
+        // editor.setValue(newValue)
+        // editor.setPosition({ lineNumber: ch.range.startLineNumber, column: ch.range.startColumn + newText.length - 1 })
+
+        // debugger
+        // setTimeout(() => {
+        editor.getModel().applyEdits([
+            {
+                forceMoveMarkers: true,
+                range: {
+                    ...ch.range,
+                    endColumn: ch.range.endColumn + ch.text.length,
                 },
-            ]);
-        }, 50 /* 50ms, a moderate value */);
+                text: newText,
+            },
+        ]);
+        // }, 10 /* 50ms, a moderate value */);
     });
+    return () => dispose.dispose()
 }
 
 
