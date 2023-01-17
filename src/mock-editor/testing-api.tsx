@@ -1,3 +1,4 @@
+import axios, { AxiosRequestConfig } from "axios"
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing"
 import { map, traverse } from "./tree"
 
@@ -39,6 +40,14 @@ export interface UpdateCaseRequest extends CaseRef {
     data: Partial<TestingCase>
 }
 export interface DeleteCaseRequest extends CaseRef {
+}
+
+export interface AddDirRequest extends CaseDirRef {
+    name: string
+}
+export interface RenameDirRequest extends CaseDirRef {
+    name: string
+    newName: string
 }
 
 export interface ListCaseResp {
@@ -198,4 +207,50 @@ export function trimPrefix(s, prefix) {
         return s.slice(prefix.length)
     }
     return s
+}
+
+export async function requestApi<T>(req: AxiosRequestConfig): Promise<T> {
+    return await axios(req).then(e => e.data).then((e: { data: T, code: number, msg?: string }) => {
+        if (e?.code !== 0) {
+            throw new Error(e?.msg ? e?.msg : `request ${req.url} failed: ${JSON.stringify(e)}`)
+        }
+        return e.data
+    })
+}
+
+
+export async function addDir(method: string, dir: string, name: string): Promise<void> {
+    await requestApi({
+        url: "http://localhost:16000/api/dir/add",
+        method: "POST",
+        data: {
+            method,
+            dir,
+            name,
+        },
+    })
+}
+
+export async function deleteDir(method: string, dir: string, name: string): Promise<void> {
+    await requestApi({
+        url: "http://localhost:16000/api/dir/delete",
+        method: "POST",
+        data: {
+            method,
+            dir,
+            name,
+        },
+    })
+}
+export async function renameDir(method: string, dir: string, name: string, newName: string): Promise<void> {
+    await requestApi({
+        url: "http://localhost:16000/api/dir/rename",
+        method: "POST",
+        data: {
+            method,
+            dir,
+            name,
+            newName,
+        },
+    })
 }

@@ -5,10 +5,11 @@ import { demoData, demoAPI as listDemoAPI } from "./TestingListDemo";
 import axios from "axios"
 import { traverse } from "./tree";
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
-import { AddCaseRequest, buildTestingItem, buildTestingItemV2, DeleteCaseRequest, ListCaseResp, TestingItem } from "./testing-api";
+import { AddCaseRequest, addDir, AddDirRequest, buildTestingItem, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, RenameDirRequest, TestingItem } from "./testing-api";
 import { ExtensionData } from "./TestingExplorerEditor";
 import { stringifyData } from "./util/format";
 import { Options } from "./TestingList";
+import { useCurrent } from "./react-hooks";
 
 const listCaseURL = 'http://localhost:16000/api/case/listAll?noCaseList=true'
 const updateSummaryURL = 'http://localhost:16000/api/summary/update'
@@ -46,6 +47,7 @@ export default function () {
             setCaseData(undefined)
         }
     }, [curItem])
+    const curItemRef = useCurrent(curItem)
 
     useEffect(() => {
         demoAPI.loadMockInfo().then(setMockInfo)
@@ -185,6 +187,12 @@ export default function () {
                     }
                     return "fail"
                 },
+                async addFolder(item, opts) {
+                    await addDir(item.method as string, item.path as string, "TODO")
+                },
+                async delFolder(item, opts) {
+                    await deleteDir(item.method as string, item.path as string, item.name)
+                },
             },
             onSelectChange(item, root, index) {
                 setItem(item)
@@ -196,9 +204,18 @@ export default function () {
             caseData,
             pendingAction: pendingAction,
             async save(caseName, caseData: TestingCase) {
-                await demoAPI.saveCase(curItem?.method as string, curItem?.path as string, curItem?.id as number, caseName, caseData).finally(() => {
-                    refresh()
-                })
+                if (curItemRef.current?.kind === "case") {
+                    await demoAPI.saveCase(curItemRef?.current?.method as string, curItemRef?.current?.path as string, curItemRef.current?.id as number, caseName, caseData).finally(() => {
+                        refresh()
+                    })
+                    return
+                } else {
+                    await renameDir(curItemRef?.current?.method as string,
+                        curItemRef?.current?.path as string,
+                        curItemRef.current?.name as string,
+                        caseName,
+                    ).then(() => refresh())
+                }
             },
             async request(req: TestingRequestV2) {
                 if (!curItem?.method) {

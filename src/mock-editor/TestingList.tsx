@@ -1,6 +1,6 @@
 
 import { createElement, CSSProperties, FunctionComponent, useEffect, useMemo, useRef, useState } from "react"
-import { VscCollapseAll } from "react-icons/vsc"
+import { VscCollapseAll, VscNewFolder } from "react-icons/vsc"
 import ExpandList, { ExpandItem, ItemController, useExpandListController } from "./ExpandList"
 import { ItemIndex, ItemPath } from "./List"
 import { useCurrent } from "./react-hooks"
@@ -27,6 +27,8 @@ export interface Options {
 }
 export interface TestingAPI {
     add: (item: TestingItem, opts: Options) => Promise<void>
+    addFolder: (item: TestingItem, opts: Options) => Promise<void>
+    delFolder: (item: TestingItem, opts: Options) => Promise<void>
     run: (item: TestingItem, opts: Options) => Promise<RunStatus>
     duplicate: (item: TestingItem, opts: Options) => Promise<void>
     delete: (item: TestingItem, opts: Options) => Promise<void>
@@ -404,7 +406,27 @@ export function ItemRender(props: {
             }} />
 
             {
-                item.record?.kind === "testSite" && <AiOutlinePlus onClick={(e) => {
+                item.record?.kind === "testSite" && <VscNewFolder onClick={(e) => {
+                    e.stopPropagation()
+                    if (api?.addFolder) {
+                        Promise.resolve(api?.addFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                            onTreeChangeRequested?.()
+                        })
+                    }
+                }} />
+            }
+            {
+                item.record?.kind === "testSite" && <RiDeleteBin6Line onClick={(e) => {
+                    e.stopPropagation()
+                    if (api?.delFolder) {
+                        Promise.resolve(api?.delFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                            onTreeChangeRequested?.()
+                        })
+                    }
+                }} />
+            }
+            {
+                item.record?.kind !== "case" && <AiOutlinePlus onClick={(e) => {
                     e.stopPropagation()
                     if (api?.add) {
                         Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {

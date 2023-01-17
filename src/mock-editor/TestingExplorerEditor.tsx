@@ -42,6 +42,9 @@ export function useTest(): MutableRefObject<TestingExplorerEditorControl> {
 export interface TestingExplorerEditorProps {
     caseName?: string
     caseData?: TestingCase
+
+
+
     mockInfo?: MockInfo
 
     saveBeforeRequest?: boolean // default true
