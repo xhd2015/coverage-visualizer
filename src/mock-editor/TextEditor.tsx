@@ -104,7 +104,6 @@ export default function (props: TextEditorProps) {
             }}
         />{
             expanded && <Popup onKeyDown={e => {
-                console.log("keydown:", e)
                 if (e.key === 'Escape') {
                     setExpanded(false)
                 }

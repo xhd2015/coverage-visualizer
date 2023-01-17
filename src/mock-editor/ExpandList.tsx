@@ -372,7 +372,7 @@ const iconStyle: CSSProperties = {
 }
 export function ExpandListItemRender(props: ExpandListItemRenderProps) {
     const [item, setItem] = useState(props.item)
-    const [expanded, setExpanded] = useState(item.expanded)
+    const [expanded, setExpanded] = useState(item?.expanded !== false)
 
     useEffect(() => {
         props.updateItem?.(item => ({ ...item, expanded, hideList: expanded === false }))
@@ -382,21 +382,20 @@ export function ExpandListItemRender(props: ExpandListItemRenderProps) {
         return props.subscribeUpdate?.(item => {
             setItem(item)
             // console.log("set expanded via item:", item.key, item.expanded)
-            setExpanded(item.expanded)
+            setExpanded(item.expanded !== false)
         })
     }, [])
-
     useEffect(() => setItem(props.item), [props.item])
 
     return <div
         style={{
             display: "flex",
             alignItems: "center",
-            paddingLeft: item.leaf && "1em",
+            paddingLeft: item?.leaf ? "1em" : undefined,
             ...item?.expandContainerStyle,
         }}
         className={item?.expandContainerClassName}>
-        {!item.leaf && (
+        {!item?.leaf && (
             expanded !== false ? < BsChevronDown style={{ marginRight: "4px", ...iconStyle }}
                 onClick={() => {
                     setExpanded(false)

@@ -220,6 +220,8 @@ export default function (props: TestingListProps) {
                             itemStatus = "fail"
                         } else if (newCounters["skip"] === total) {
                             itemStatus = "skip"
+                        } else if (newCounters["not_run"] === total) {
+                            itemStatus = "not_run"
                         }
 
                         return {
@@ -306,6 +308,10 @@ export default function (props: TestingListProps) {
                 onClickRun={() => {
                     const isRoot = controller.path?.length <= 1
                     let needCall = isRoot
+                    // console.log("run:", controller.path, isRoot)
+                    // if (true) {
+                    //     return
+                    // }
                     runItem(item, controller.path, () => {
                         // get the update-to-date item
                         const item = controller.item
@@ -331,7 +337,7 @@ export default function (props: TestingListProps) {
         />
     </div>
 }
-function mergeChildrenCounters(children: TestingStatItem[], getChildCounters: (chld: TestingStatItem) => Partial<StateCounters>): [Partial<StateCounters>, number] {
+function mergeChildrenCounters(children: TestingStatItem[] | undefined, getChildCounters: (chld: TestingStatItem) => Partial<StateCounters>): [Partial<StateCounters>, number] {
     const newCounters: Partial<StateCounters> = {}
     let total = 0
     children?.forEach?.(chld => {
