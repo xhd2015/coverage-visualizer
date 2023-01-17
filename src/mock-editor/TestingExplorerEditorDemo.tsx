@@ -24,6 +24,10 @@ export const demoAPI: API = {
                 dir,
                 data: capObj({ ...caseData }),
             }
+        }).then(e => e.data).then(e => {
+            if (e?.code !== 0) {
+                throw new Error(e?.msg)
+            }
         })
     },
     requestTest: function <T>(req: TestingRequestV2): Promise<TestingResponseV2<T>> {

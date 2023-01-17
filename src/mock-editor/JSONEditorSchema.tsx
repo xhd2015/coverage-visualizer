@@ -90,7 +90,7 @@ function addReplaceFilter(editor: editor.IStandaloneCodeEditor, editReplace: { c
             return;
         }
         const newText = editReplace.current?.(ch.text);
-        if (!newText) {
+        if (!newText || newText === ch.text) {
             return;
         }
 

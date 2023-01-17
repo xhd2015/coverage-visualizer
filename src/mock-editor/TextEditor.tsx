@@ -103,7 +103,12 @@ export default function (props: TextEditorProps) {
                 setExpanded(!expanded)
             }}
         />{
-            expanded && <Popup>
+            expanded && <Popup onKeyDown={e => {
+                console.log("keydown:", e)
+                if (e.key === 'Escape') {
+                    setExpanded(false)
+                }
+            }}>
                 <Code
                     containerStyle={{
                         width: "80%",

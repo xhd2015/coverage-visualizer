@@ -83,7 +83,7 @@ export default function (props: TestingExplorerEditorProps) {
         }
         setConfig({
             name: nameRef.current,
-            request: stringifyDataIndent(data.Request),
+            request: stringifyDataIndent(data?.Request),
             comment: data.Comment,
             skip: data.Skip,
             expectErr: !!data.AssertError,
@@ -268,7 +268,7 @@ export default function (props: TestingExplorerEditorProps) {
                 // onAllMockSave={updateAllMock}
                 mockSchema={rootMockSchema}
                 getMock={(item) => {
-                    const mockItem = mockRef.current?.Mapping?.[item.item?.pkg]?.[item?.item?.func]
+                    const mockItem = mockRef.current?.Mapping?.[item?.item?.pkg]?.[item?.item?.func]
                     if (!mockItem) {
                         return undefined
                     }

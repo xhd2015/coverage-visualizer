@@ -171,7 +171,7 @@ export default function () {
                     }
                     const resp = await demoAPI.requestTest({
                         method: item.method,
-                        request: stringifyData(usedCaseData.Request),
+                        request: stringifyData(usedCaseData?.Request),
                         assertIsErr: !!usedCaseData?.AssertError,
                         assertError: usedCaseData?.AssertError,
                         asserts: stringifyData(usedCaseData?.Asserts),
