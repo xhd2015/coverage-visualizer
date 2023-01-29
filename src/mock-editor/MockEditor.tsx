@@ -134,12 +134,13 @@ export default function (props: MockEditorProps) {
                     content = "Error: " + selectedRecord.error
                     language = "plaintext"
                 } else {
-                    content = selectedRecord?.result ? JSON.stringify(selectedRecord?.result, null, "    ") : ""
+                    // NOTE: undefined will return undefined, rather "null"
+                    content = selectedRecord?.result !== undefined ? JSON.stringify(selectedRecord?.result, null, "    ") : ""
                     language = "json"
                 }
             } else {
                 // NOTE: JSON.stringify(undefined) returns undefined
-                content = selectedRecord?.args ? JSON.stringify(selectedRecord?.args, null, "    ") : ""
+                content = selectedRecord?.args !== undefined ? JSON.stringify(selectedRecord?.args, null, "    ") : ""
                 language = "json"
             }
         }
