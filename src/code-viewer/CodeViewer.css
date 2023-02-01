@@ -1,0 +1,76 @@
+.code-viewer {
+    border: 1px solid #FAFAFA;
+    background-color: white;
+}
+
+.code-viewer-titled {
+    border: 1px solid #dbdbdb;
+    /* border-top: 0; */
+    border-radius: 4px;
+}
+
+.code-viewer-line-number {
+    position: relative;
+    background-color: #FAFAFA;
+    /*to hold lines upto 9999*/
+    width: 4em;
+    /* width: 40px; */
+    /*min width is required, otherwise right side content may break it with wrap*/
+    min-width: 4em;
+    /*keep the same height with right side*/
+    height: 100%;
+    text-align: right;
+}
+
+.code-viewer-line.code-viewer-line-new {
+    background-color: #ECFCF0;
+    /*green like*/
+}
+
+
+.code-viewer-line.code-viewer-line-new .code-viewer-line-number {
+    /*green darker*/
+    background-color: #DDFBE5;
+}
+
+.code-viewer-line.code-viewer-line-delete {
+    background-color: #FBE9EB;
+    /*red like*/
+}
+
+.code-viewer-line.code-viewer-line-delete .code-viewer-line-number {
+    /*red darker*/
+    background-color: #F8D7DC;
+}
+
+
+.code-viewer-line-content {
+    position: relative;
+    margin: 0px;
+    white-space: pre-wrap;
+    padding-left: 20px;
+    line-break: anywhere;
+}
+
+.code-viewer-line.code-viewer-line-new .code-viewer-line-number:after {
+    content: '+';
+    position: absolute;
+    color: #AFAFAF;
+    right: 0;
+    margin-right: -10px;
+    z-index: 1;
+}
+
+.code-viewer-line.code-viewer-line-delete .code-viewer-line-number:after {
+    content: '-';
+    position: absolute;
+    color: #AFAFAF;
+    right: 0;
+    margin-right: -10px;
+    z-index: 1;
+}
+
+.code-viewer-line-content span {
+    white-space: break-spaces;
+    word-wrap: break-word;
+}

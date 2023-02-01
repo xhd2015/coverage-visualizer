@@ -1,0 +1,9 @@
+.fade-in {
+    animation: slide 0.5s forwards;
+    animation-delay: 2s;
+}
+
+.fade-out {
+    animation: slide 0.5s forwards;
+    animation-delay: 2s;
+}

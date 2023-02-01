@@ -1,7 +1,7 @@
 
 import { createElement, CSSProperties, FunctionComponent, useEffect, useMemo, useRef, useState } from "react"
 import { VscCollapseAll, VscNewFolder } from "react-icons/vsc"
-import ExpandList, { ExpandItem, ItemController, useExpandListController } from "./ExpandList"
+import ExpandList, { ExpandItem, ItemController, useExpandListController, useSelect } from "./ExpandList"
 import { ItemIndex, ItemPath } from "./List"
 import { useCurrent } from "./react-hooks"
 import { filter, map, traverse } from "./tree"
@@ -18,6 +18,7 @@ import { throttle } from "./util/throttle"
 import { TestingItem } from "./testing-api"
 
 import "./TestingList.css"
+import ToolBar from "./support/ToolBar"
 
 type StateCounters = Record<RunStatus, number>
 
@@ -147,11 +148,11 @@ export default function (props: TestingListProps) {
     }, [initItems, showFailOnly, showSkipOnly])
 
     // console.log("trace items after filtered:", versionRef.current, items)
-
-    interface ItemControllerExt extends ItemController<TestingStatItem> {
-        clear?: () => void
-    }
-    const [selectedController, setSelectedController] = useState<ItemControllerExt>()
+    const { selectedController, setSelectedController, getSelectAction } = useSelect<TestingStatItem>({
+        onSelectChange: (item, root, index) => {
+            props.onSelectChange?.(item?.record, root?.record, index)
+        }
+    })
 
     // clear selected if it disappear
     useEffect(() => {
@@ -251,13 +252,12 @@ export default function (props: TestingListProps) {
     }}
         className={props.className}
     >
-        <div className="list-bar" style={{ display: "flex", alignItems: "center" }}>
-            <VscCollapseAll onClick={() => {
-                toggleExpandRef.current?.()
-            }} />
-            <Checkbox label="Fail" value={showFailOnly} onChange={setShowFailOnly} style={{ marginLeft: "4px" }} />
-            <Checkbox label="Skip" value={showSkipOnly} onChange={setShowSkipOnly} style={{ marginLeft: "4px" }} />
-        </div>
+        <ToolBar onToggleExpand={() => toggleExpandRef.current?.()}
+            extra={<>
+                <Checkbox label="Fail" value={showFailOnly} onChange={setShowFailOnly} style={{ marginLeft: "4px" }} />
+                <Checkbox label="Skip" value={showSkipOnly} onChange={setShowSkipOnly} style={{ marginLeft: "4px" }} />
+            </>}
+        />
         <ExpandList<TestingStatItem>
             items={items}
             mergeStatus={(item, prevItem) => ({
@@ -280,24 +280,9 @@ export default function (props: TestingListProps) {
                 isRoot={controller.path.length <= 1}
                 onTreeChangeRequested={props.onTreeChangeRequested}
                 onClick={() => {
-                    if (selectedController?.id === controller.id) {
+                    const action = getSelectAction(item, controller)
+                    if (!action) {
                         return
-                    }
-                    const action = () => {
-                        // clear prev
-                        if (selectedController) {
-                            selectedController.clear?.()
-                            selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
-                        }
-
-                        const clear = controller.subscribeUpdate((item) => {
-                            props.onSelectChange?.(item.record, controller.root?.record, controller.index)
-                        })
-
-                        setSelectedController({ ...controller, clear })
-                        controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
-
-                        props.onSelectChange?.(item.record, controller.root?.record, controller.index)
                     }
                     if (!props.checkBeforeSwitch) {
                         action()
@@ -389,10 +374,8 @@ export function ItemRender(props: {
             style={{ marginLeft: "4px" }}
         />}
 
-
-
         {
-            // always show, use hover to control
+            // always show, use hover to control hideness
         }
         <div
             className="testing-item-menu"
@@ -462,14 +445,6 @@ export function ItemRender(props: {
                 }} />
             }
         </div>
-
-
-        {/* <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{item.name}</div> */}
-        {/* {
-            item.record.panic ? <Tag style={{ color: greyColor, marginLeft: "5px", padding: "1px" }} >panic</Tag> :
-                (item.record.error ? <Tag style={{ color: greyColor, marginLeft: "5px", padding: "1px" }} >error</Tag> : undefined)
-        } */}
-        {/* <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{0}</div> */}
     </div>
 }
 

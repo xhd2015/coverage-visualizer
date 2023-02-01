@@ -1,0 +1,11 @@
+.block-line {
+    display: flex;
+}
+
+.block-line.collapsed {
+    justify-content: center;
+    border-top: 1px solid #dbdbdb;
+    border-bottom: 1px solid #dbdbdb;
+    background-color: "#FAFAFA";
+    color: "#1068bf";
+}

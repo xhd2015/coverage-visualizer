@@ -108,6 +108,7 @@ export default function Code(props: IProps) {
     const [editor, setEditor] = useState(null as monaco.editor.IStandaloneCodeEditor)
     const [version, setVersion] = useState(0)
 
+    const editorRef = useCurrent(editor)
     const model = useMonacoModel({
         editor: editor,
         uriPrefix: "code/",
@@ -119,17 +120,23 @@ export default function Code(props: IProps) {
         readonly: props.readonly,
     })
 
+    // for debug
+    // useEffect(() => {
+    //     console.log("file change:", props.file)
+    // }, [props.file])
+
+    const versionRef = useCurrent(version)
     useEffect(() => {
         // debug
         // console.log("may file update:", props.file)
-        setVersion(version + 1)
+        setVersion(versionRef.current + 1)
     }, [props.file, model])
 
     // apply model
     useEffect(() => {
-        // console.log("version change:", version, oldModel?.fileKey, model?.fileKey)
+        console.log("version change:", version, model?.fileKey, model, editorRef.current)
         if (model && model.model && !model.model.isDisposed()) {
-            editor?.setModel?.(model.model)
+            editorRef.current.setModel?.(model.model)
             // apply diff model
 
             // debug
@@ -156,7 +163,6 @@ export default function Code(props: IProps) {
     if (props.controlRef) {
         props.controlRef.current = {
             setContent: (content) => {
-                console.log("set content:", content)
                 const c = normalizeCodeContent(content)
                 editor.setValue(c)
                 // setTimeout(() => editor.setValue(c), 20)
@@ -181,7 +187,8 @@ export default function Code(props: IProps) {
                     // parent possible:
                     // https://github.com/microsoft/monaco-editor/issues/1853#issuecomment-593484147
                     alwaysConsumeMouseWheel: false,
-                }
+                },
+                automaticLayout: true,
             }
         );
         if (props.initContent !== undefined) {
@@ -218,7 +225,8 @@ export default function Code(props: IProps) {
 
     return <div style={{
         position: "relative",
-        ...props.containerStyle
+        ...props.containerStyle,
+        // width: "500px",
     }} className={`code-container ${props.containerClassName || ""}`} >
         {
             props.showExpandIcon && <div className="code-container-zoom">

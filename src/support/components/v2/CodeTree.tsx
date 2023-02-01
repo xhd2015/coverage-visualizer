@@ -64,6 +64,9 @@ export default function CodeTree(props: IProps) {
                 file={selectFile}
                 fileDetailGetter={props.fileDetailGetter}
                 contentDecorator={props.contentDecorator}
+                containerStyle={{
+                    flexGrow: 1
+                }}
             />
         }
         {

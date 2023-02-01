@@ -3,6 +3,15 @@ import { FileDetail, FileDetailGetter, ITreeNode, traverseNode } from "../../sup
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { useEffect, useState } from "react";
 
+export interface IContentDecoration {
+    lineNumber: number
+    covered: boolean
+}
+
+export interface IContentDecorator {
+    getFileDecorations: (path: string) => Promise<IContentDecoration[]>
+}
+
 export interface ContentDecorator {
     getFileDecorations: (path: string) => Promise<monaco.editor.IModelDeltaDecoration[]>
 }
@@ -81,7 +90,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
 
         const resolving = new Promise(async (resolve, reject) => {
             const fd = await fileDetailGetter?.getDetail?.(file)
-            // console.log("get file detail:", file, fd)
+            console.log("get file detail:", file, fd)
             try {
                 let model: monaco.editor.ITextModel
                 if (!fd) {
@@ -91,13 +100,15 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
                         monaco.Uri.file(fileKey)
                     )
                 } else {
+                    // debugger
                     const normContent = normalizeCodeContent(fd.content)
+                    // const normContent = fd.content
                     model = monaco.editor.createModel(
                         normContent,
                         fd.language,
                         monaco.Uri.file(fileKey)
                     )
-                    model.setValue(normContent)
+                    // model.setValue(normContent)
                 }
                 Object.assign(modelOpts, {
                     file: file,
@@ -125,7 +136,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
         modelOpts.resolving = resolving
         try {
             await resolving
-            // console.log("fileKey resolved:", fileKey)
+            console.log("fileKey resolved:", fileKey)
         } finally {
             modelOpts.resolving = null
         }
@@ -181,12 +192,14 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
         const opts = await getEditorModel(props.file, cache, props.fileDetailGetter, props.contentDecorator, `${props.uriPrefix || ''}_v${fileGetterVersion}/`,
             { readonly: props.readonly }
         )
-        // console.log("updating model:", props.uriPrefix, props.file, opts)
+
+        console.log("updating model:", props.uriPrefix, props.file, opts)
         setModel(opts)
         setModelVersion(modelVersion + 1)
         return
     }
     useEffect(() => {
+        console.log("file change:", props.file, fileGetterVersion)
         updateContent()
     }, [props.file, fileGetterVersion, props.contentDecorator])
 

@@ -1,4 +1,4 @@
-import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react"
+import { CSSProperties, MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BsChevronDown, BsChevronRight } from "react-icons/bs"
 import { DispatchUpdate, Item, ItemIndex, ItemPath, List, SubscribeUpdate } from "./List"
 import { useCurrent } from "./react-hooks"
@@ -79,25 +79,6 @@ export function useExpandListController<T extends ExpandItem & { children?: T[] 
     return useRef<ExpandListController<T>>()
 }
 
-export interface ExpandListProps<T extends ExpandItem & { children?: T[] }> {
-    items?: T[] // single root or item list
-    render?: (item: T, controller: ItemController<T>) => any
-
-    initialAllExpanded?: boolean
-    toggleExpandRef?: React.MutableRefObject<(expand?: boolean) => void>
-
-    mergeStatus?: (item: T, prev: T, path: ItemPath) => T
-
-    onChange?: (item: T, path: ItemPath) => void
-
-    controllerRef?: MutableRefObject<ExpandListController<T>>
-
-    // call this method when new session all some bug found
-    // but in practice you can just ignore it, I'll explain
-    // why later.
-    clearInternalStates?: React.MutableRefObject<() => void>
-}
-
 // debug
 function debugCheckDuplicate(items: any[], prefix: string) {
     // check item
@@ -120,6 +101,25 @@ function debugCheckDuplicateChildren(items: any[], prefix: string) {
         }
         ids[e.key] = true
     })
+}
+
+export interface ExpandListProps<T extends ExpandItem & { children?: T[] }> {
+    items?: T[] // single root or item list
+    render?: (item: T, controller: ItemController<T>) => any
+
+    initialAllExpanded?: boolean // default true
+    toggleExpandRef?: React.MutableRefObject<(expand?: boolean) => void>
+
+    mergeStatus?: (item: T, prev: T, path: ItemPath) => T
+
+    onChange?: (item: T, path: ItemPath) => void
+
+    controllerRef?: MutableRefObject<ExpandListController<T>>
+
+    // call this method when new session all some bug found
+    // but in practice you can just ignore it, I'll explain
+    // why later.
+    clearInternalStates?: React.MutableRefObject<() => void>
 }
 
 export default function ExpandList<T extends ExpandItem & { children?: T[] }>(props: ExpandListProps<T>) {
@@ -408,4 +408,53 @@ export function ExpandListItemRender(props: ExpandListItemRenderProps) {
         )}
         {props.itemRenderContent}
     </div>
+}
+
+export interface ItemControllerExt<T extends ExpandItem & { children?: T[] }> extends ItemController<T> {
+    removeAttachedListener: () => void
+}
+
+export interface SelectProps<T extends ExpandItem & { children?: T[] }> {
+    onSelectChange?: (item: T, root: T, index: ItemIndex) => void
+}
+export interface SelectBundle<T extends ExpandItem & { children?: T[] }> {
+    selectedController: ItemControllerExt<T>
+    setSelectedController: React.Dispatch<React.SetStateAction<ItemControllerExt<T>>>
+
+    getSelectAction: (item: T, controller: ItemController<T>) => (() => void)
+}
+
+export function useSelect<T extends ExpandItem & { children?: T[] }>(props: SelectProps<T>): SelectBundle<T> {
+    const [selectedController, setSelectedController] = useState<ItemControllerExt<T>>()
+
+    const selectedControllerRef = useCurrent(selectedController)
+    const onSelectChangeRef = useCurrent(props.onSelectChange)
+    const getSelectAction = useCallback((item: T, controller: ItemController<T>) => {
+        const selectedController = selectedControllerRef.current
+        if (selectedController?.id === controller.id) {
+            return
+        }
+        const action = () => {
+            const begin = new Date().getTime()
+            console.log("action begin")
+            // clear prev
+            if (selectedController) {
+                selectedController.removeAttachedListener?.()
+                selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
+            }
+
+            const removeAttachedListener = controller.subscribeUpdate((item) => {
+                onSelectChangeRef.current?.(item, controller.root, controller.index)
+            })
+
+            setSelectedController({ ...controller, removeAttachedListener: removeAttachedListener })
+            controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
+            onSelectChangeRef.current?.(item, controller.root, controller.index)
+            const end = new Date().getTime()
+            console.log("action end:", end - begin)
+        }
+        return action
+    }, [])
+
+    return { selectedController, setSelectedController, getSelectAction }
 }

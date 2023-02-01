@@ -90,17 +90,29 @@ export function div(a: number, b: number): number {
   }
   return 1
 }
-export function renderPathCovHTML(filename: string, total: number, covered: number, opts?: renderCovPathOptions): string {
-  if (total > 0) {
-    const ratioBase = opts?.ratioBase > 0 ? opts.ratioBase : 0.5
-    const coverRatio = div(covered, total)
-    const color = coverRatio >= ratioBase ? "green" : "red"
-    const { coverageMode } = opts || {}
-    const showValue = coverageMode === 'line' ? `${covered} / ${total}` : divPercentFloor(covered, total)
-    return `<div>${filename} <span style="color: ${color}"><small>${showValue}</samll></span><div>`
-  } else {
+export function renderPathCovHTML(filename: string, cov: FileCoverage | undefined): string {
+  if (!cov) {
     return `<div>${filename}<div>`;
   }
+
+  const color = cov.good ? "green" : "red"
+  return `<div>${filename} <span style="color: ${color}"><small>${cov.percent}</samll></span><div>`
+}
+
+export interface FileCoverage {
+  percent: string
+  good: boolean
+}
+export function getFileCoverage(total: number, covered: number, opts?: renderCovPathOptions): (FileCoverage | undefined) {
+  if (!(total > 0)) {
+    return
+  }
+  const ratioBase = opts?.ratioBase > 0 ? opts.ratioBase : 0.5
+  const coverRatio = div(covered, total)
+  const { coverageMode } = opts || {}
+  const showValue = coverageMode === 'line' ? `${covered} / ${total}` : divPercentFloor(covered, total)
+
+  return { percent: showValue, good: coverRatio >= ratioBase }
 }
 
 export function divPercentFloor(a, b): string {

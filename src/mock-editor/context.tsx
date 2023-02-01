@@ -1,5 +1,3 @@
-
-
 // in a 3 column layout,
 // A |    B
 //   | B1  B2 
