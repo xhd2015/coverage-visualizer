@@ -1,9 +1,8 @@
-import { CSSProperties, useRef, useState } from "react";
-import { traverse } from "../mock-editor/tree";
+import { CSSProperties } from "react";
 import CodeViewerList, { File } from "./CodeViewerList";
 import { compactLines, diffCode } from "./diff";
 import { ChangeType } from "./diff-vscode";
-import { RenderBlockLine, DiffCodeViewerTitled } from "./DiffCodeViewer";
+import { DiffCodeViewerTitled } from "./DiffCodeViewer";
 import { go } from "./lang";
 
 // we've tested for 100 files there shall have no

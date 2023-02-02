@@ -12,13 +12,17 @@ export interface DiffCodeViewerProps {
     // blocks?: DiffBlock[]
     style?: CSSProperties
 
+    hideOldCode?: boolean
+
     onClickExpandUp?: (block: BlockLineProps, index: number) => void
     onClickExpandDown?: (block: BlockLineProps, index: number) => void
 }
 
 export default function DiffCodeViewer(props: DiffCodeViewerProps) {
     return <div className="code-viewer" style={props.style}>{
-        props.lines?.map?.((block, i) => <RenderBlockLine key={block.collapsed ? `collapse_${i}` : block.line?.index}
+        props.lines?.map?.((block, i) => <RenderBlockLine
+            key={block.collapsed ? `collapse_${i}` : block.line?.index}
+            hideOldCode={props.hideOldCode}
             {...block}
             onClickExpandDown={() => {
                 props.onClickExpandUp?.(block, i)
@@ -44,12 +48,13 @@ export interface BlockLineProps {
     // as a load prompt
     collapsedLines?: BlockLine[]
     collapsed?: boolean
-
 }
 
 export interface BlockLineWithListenersProps extends BlockLineProps {
     onClickExpandUp?: () => void
     onClickExpandDown?: () => void
+
+    hideOldCode?: boolean
 }
 
 export function RenderBlockLine(props: BlockLineWithListenersProps) {
@@ -61,18 +66,20 @@ export function RenderBlockLine(props: BlockLineWithListenersProps) {
                 <LinkButton icon={<BsArrowBarDown />} style={{ marginRight: "10px" }} onClick={props.onClickExpandUp} />
                 <LinkButton icon={<BsArrowBarUp />} onClick={props.onClickExpandDown} />
             </div> : <>
-                <Line hideNumber={props.line?.oldLine === undefined}
-                    {...props.line?.oldLine}
-                    style={{
-                        //  flexGrow: 1,
-                        width: "50%",
-                        ...props.line.oldLine?.style,
-                    }} />
+                {!props.hideOldCode &&
+                    <Line hideNumber={props.line?.oldLine === undefined}
+                        {...props.line?.oldLine}
+                        style={{
+                            //  flexGrow: 1,
+                            width: "50%",
+                            ...props.line.oldLine?.style,
+                        }} />
+                }
                 <Line hideNumber={props.line?.newLine === undefined}
                     {...props.line?.newLine}
                     style={{
                         // flexGrow: 1
-                        width: "50%",
+                        width: !props.hideOldCode && "50%",
                         ...props.line.newLine?.style,
                     }} />
             </>
@@ -113,6 +120,8 @@ export interface DiffCodeViewerTitledProps {
     // watched
     loadLines?: () => Promise<BlockLineProps[]>
     watchLoadLines?: boolean
+
+    hideOldCode?: boolean
 }
 export function DiffCodeViewerTitled(props: DiffCodeViewerTitledProps) {
     const [loaded, setLoaded] = useState(false)
@@ -160,7 +169,9 @@ export function DiffCodeViewerTitled(props: DiffCodeViewerTitledProps) {
         {
             !loaded && props.loadingPlaceholder
         }
-        <DiffCodeViewer lines={lines}
+        <DiffCodeViewer
+            lines={lines}
+            hideOldCode={props.hideOldCode}
             onClickExpandUp={(block, i) => {
                 setLines(expandLines(lines, block, i, true))
             }}

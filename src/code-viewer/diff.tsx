@@ -4,7 +4,7 @@
 // oldLines are empty => creation
 
 import { ChangeType, diff, forEachLineMapping } from "./diff-vscode"
-import { RenderBlockLine, BlockLineProps, BlockLine } from "./DiffCodeViewer"
+import { BlockLine, BlockLineProps } from "./DiffCodeViewer"
 import { LineProps } from "./Line"
 import { lineDelete, lineNew } from "./styles"
 
