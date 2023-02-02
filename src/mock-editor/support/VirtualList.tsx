@@ -34,9 +34,9 @@ export default function <T extends Key>(props: VirtualListProps<T>) {
     if (props.controllerRef) {
         props.controllerRef.current = {
             scrollTo(index) {
-                console.log("[DEBUG] scroll begin", new Date(), index)
+                // console.log("[DEBUG] scroll begin", new Date(), index)
                 virtualComponentRef.current.scrollTo(index)
-                console.log("[DEBUG] scroll end", new Date())
+                // console.log("[DEBUG] scroll end", new Date())
             },
         }
     }
@@ -145,9 +145,9 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         // NOTE: first and last child can be the same
         const handler = e => {
             // special callback, do not rely on this
-            const { baseIndex, loadedNum, loading } = _this
+            const { baseIndex, loadedNum, loading } = this
             const { maxRendering, loadItems } = this.opts
-            const setLoading = (b: boolean) => _this.loading = b
+            const setLoading = (b: boolean) => this.loading = b
 
             const scrollParent: HTMLElement = e.target
             const lastScrollTop = savedScrollTop
@@ -167,6 +167,7 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
 
             // calcaulte previous items
             if (typeof lastScrollTop === 'number' && savedScrollTop <= lastScrollTop) {
+                // console.log("DEBUG scroll up:", firstChildIndex, lastChildIndex)
                 // if (savedScrollTop === lastScrollTop) {
                 //     return
                 // }
@@ -203,18 +204,11 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
                             this.mounted[base + i] = el
                             this.baseIndex--
                         }
-                        // scroll to firstChild's position
-                        // firstChild.scrollIntoView()
-                        // new offset
-                        const newOffset = getOffsetHeightParent(container, firstChild)
-                        console.log("adjust scroll:", newOffset - savedOffset)
-                        // e.preventDefault()
-                        // scrollParent.scrollBy({ behavior: "smooth", left: 0, top: newOffset - savedOffset })
-                        // savedScrollTop = scrollParent.scrollTop
                     }).finally(() => setLoading(false))
                 }
                 return
             }
+            // console.log("DEBUG scroll down:", firstChildIndex, lastChildIndex)
 
             // load N from firstChildIndex
             // there are 'firstChildIndex' element ahead, 
@@ -233,6 +227,7 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         scrollParent.addEventListener('scroll', handlerDebounced)
         // scrollParent.addEventListener('wheel', handlerDebounced)
 
+        // initial load
         this._loadRange(this.baseIndex, this.opts.maxRendering)
         this._handlersRemove.push(() => {
             scrollParent.removeEventListener('scroll', handlerDebounced)
@@ -294,7 +289,7 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
     }
 
     reset() {
-        console.log("items reset")
+        // console.log("DEBUG items reset")
         this.baseIndex = 0
         this.loadedNum = 0
         this.cachedItems = {}
@@ -312,7 +307,6 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
 
         this.scrollParent.scrollTo({ behavior: "smooth", top: 0 })
         this._setupScrollHandler()
-        this._loadRange(this.baseIndex, this.opts.maxRendering)
     }
 
     async scrollTo(index: number) {

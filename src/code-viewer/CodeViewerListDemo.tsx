@@ -3,7 +3,7 @@ import { traverse } from "../mock-editor/tree";
 import CodeViewerList, { File } from "./CodeViewerList";
 import { compactLines, diffCode } from "./diff";
 import { ChangeType } from "./diff-vscode";
-import { BlockLine, DiffCodeViewerTitled } from "./DiffCodeViewer";
+import { RenderBlockLine, DiffCodeViewerTitled } from "./DiffCodeViewer";
 import { go } from "./lang";
 
 // we've tested for 100 files there shall have no

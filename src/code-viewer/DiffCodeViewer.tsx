@@ -18,7 +18,7 @@ export interface DiffCodeViewerProps {
 
 export default function DiffCodeViewer(props: DiffCodeViewerProps) {
     return <div className="code-viewer" style={props.style}>{
-        props.lines?.map?.((block, i) => <BlockLine key={block.collapsed ? `collapse_${i}` : block.line?.index}
+        props.lines?.map?.((block, i) => <RenderBlockLine key={block.collapsed ? `collapse_${i}` : block.line?.index}
             {...block}
             onClickExpandDown={() => {
                 props.onClickExpandUp?.(block, i)
@@ -52,7 +52,7 @@ export interface BlockLineWithListenersProps extends BlockLineProps {
     onClickExpandDown?: () => void
 }
 
-export function BlockLine(props: BlockLineWithListenersProps) {
+export function RenderBlockLine(props: BlockLineWithListenersProps) {
     return <div
         className={`block-line ${props.collapsed ? "collapsed" : ""}`}>
         {
@@ -109,8 +109,10 @@ export interface DiffCodeViewerTitledProps {
     controllerRef?: MutableRefObject<DiffCodeViewerTitledController>
 
     loadingPlaceholder?: any
-    loadLines?: () => Promise<BlockLineProps[]>
 
+    // watched
+    loadLines?: () => Promise<BlockLineProps[]>
+    watchLoadLines?: boolean
 }
 export function DiffCodeViewerTitled(props: DiffCodeViewerTitledProps) {
     const [loaded, setLoaded] = useState(false)
@@ -118,12 +120,25 @@ export function DiffCodeViewerTitled(props: DiffCodeViewerTitledProps) {
 
     const loadLinesRef = useCurrent(props.loadLines)
     useEffect(() => {
+        if (props.watchLoadLines) {
+            // already loaded
+            return
+        }
         // will be loaded at least once
         Promise.resolve(loadLinesRef.current?.()).then(lines => {
             setLines(lines)
             setLoaded(true)
         })
     }, [])
+
+    useEffect(() => {
+        if (props.watchLoadLines) {
+            Promise.resolve(props.loadLines?.()).then(lines => {
+                setLines(lines)
+                setLoaded(true)
+            })
+        }
+    }, [props.watchLoadLines, props.loadLines])
 
     if (props.controllerRef) {
         props.controllerRef.current = {

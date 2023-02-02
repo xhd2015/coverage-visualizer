@@ -169,7 +169,7 @@ export function FileRender(props: { file: File, onClick?: any }) {
 export function RenderFileCoverage(props: { coverage?: FileCoverage }) {
     const cov = props.coverage
     return <>{
-        cov && <span style={{ color: cov.good ? "green" : "red", marginLeft: "4px" }}>
+        cov && <span style={{ color: cov.good ? "green" : "red", marginLeft: "4px", whiteSpace: "nowrap" }}>
             <small>{cov.percent}</small>
         </span>
     }</>

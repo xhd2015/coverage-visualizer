@@ -94,7 +94,7 @@ export default function (props: DiffCodeViewerDemoProps) {
 //     fmt.Printf("world")
 // }`
 
-const oldCode = `package biz
+const oldCode2 = `package biz
 
 import (
 	"context"
@@ -126,7 +126,7 @@ import (
 	pb "example.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.com"
 )
 `
-const newCode = `package biz
+const newCode2 = `package biz
 
 import (
 	"context"
@@ -156,6 +156,21 @@ import (
 	"example.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.com//src/log"
 	pb "example.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.comexample.com/"
 )
+`
+const oldCode = `		termInfo.AdminFee = monthMonies[i].Round_admin_fee.String()
+termInfo.BtxFee = monthMonies[i].Round_btx_fee.String()
+termInfo.TotalFee = monthMonies[i].Display_fee.String()
+
+termInfo.Principal = monthMonies[i].Calc_principal.String()
+termInfo.TotalAmount = monthMonies[i].Display_repay_amount.String()
+`
+const newCode = `		termInfo.AdminFee = monthMonies[i].Round_admin_fee.String()
+termInfo.BtxFee = monthMonies[i].Round_btx_fee.String()
+termInfo.TotalFee = monthMonies[i].Display_fee.String()
+termInfo.IofFee = monthMonies[i].IofFee.String()
+
+termInfo.Principal = monthMonies[i].Calc_principal.String()
+termInfo.TotalAmount = monthMonies[i].Display_repay_amount.String()
 `
 
 export function DiffCodeViewCodeSnippetDemo() {
