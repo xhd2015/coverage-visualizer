@@ -20,7 +20,7 @@ export default function (props: TestingExplorerProps) {
             height: "fit-content",
             minHeight: "400px",
             // maxHeight: "610px",
-            width: "90%",
+
             // overflow: "auto",
             userSelect: "none",
             border: "1px solid lightgrey",
