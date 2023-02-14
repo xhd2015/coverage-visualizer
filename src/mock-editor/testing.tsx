@@ -18,6 +18,7 @@ export interface MockData {
                 Error?: string
                 Resp?: any // Resp needs to be type-parsed against the server type
                 // examples are: string, {"Resp_0":"","Resp_1":""}
+                RespNull?: boolean
             }
         }
     }

@@ -7,7 +7,7 @@ import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorContr
 import "./TestingEditor.css";
 import { tryParse } from "./TestingExplorerEditorDemo";
 import { RootRecord } from "./trace-types";
-import { stringifyData, stringifyDataIndent } from "./util/format";
+import { objectifyData, stringifyData, stringifyDataIndent } from "./util/format";
 import { debounce } from "lodash"
 
 export interface ExtensionData {
@@ -279,7 +279,7 @@ export default function (props: TestingExplorerEditorProps) {
                         ...mockItem,
                         mockMode: mockItem.Error ? "Mock Error" : "Mock Response",
                         mockErr: mockItem.Error,
-                        mockResp: stringifyDataIndent(mockItem.Resp) // needs to be string, not object
+                        mockResp: mockItem?.RespNull ? "null" : stringifyDataIndent(mockItem.Resp), // needs to be string, not object
                     }
                 }}
                 checkNeedMock={(e) => {
@@ -310,7 +310,8 @@ export default function (props: TestingExplorerEditorProps) {
                         // TODO: handle JSON parse error here
                         // NOTE: why JSON.parse? because this is an inner data we have to do so
                         // when finally request the endpoint we can use string, but here, object only
-                        Resp: data.mockMode === "Mock Error" ? "" : data.mockResp
+                        Resp: data.mockMode === "Mock Error" ? "" : objectifyData(data.mockResp),
+                        RespNull: data.mockMode === "Mock Response" && data.mockResp === "null" ? true : false,
                     } : undefined
                 }}
                 debugging={requesting}
