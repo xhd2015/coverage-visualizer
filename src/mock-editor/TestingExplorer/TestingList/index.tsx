@@ -61,7 +61,9 @@ export interface TestingListProps {
 
     onTreeChangeRequested?: () => void
 
-    checkBeforeSwitch?: (action: () => void) => void
+    onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
+
+    checkBeforeSwitch?: (action: () => Promise<void>) => void
 }
 
 export default function (props: TestingListProps) {
@@ -289,32 +291,78 @@ export default function (props: TestingListProps) {
                     props.checkBeforeSwitch(action)
                 }}
                 onClickRun={() => {
-                    const isRoot = controller.path?.length <= 1
-                    let needCall = isRoot
-                    // console.log("run:", controller.path, isRoot)
-                    // if (true) {
+                    const runAction = () => {
+                        const isRoot = controller.path?.length <= 1
+                        let needCall = isRoot
+                        // console.log("run:", controller.path, isRoot)
+                        // if (true) {
+                        //     return
+                        // }
+                        runItem(item, controller.path, () => {
+                            // get the update-to-date item
+                            const item = controller.item
+                            if (!needCall) {
+                                return
+                            }
+                            if (!isRoot) {
+                                return
+                            }
+                            // debug
+                            // if (item.key === "/_0") {
+                            //     console.log("item update:", controller.item)
+                            // }
+                            // root
+                            if (item.status === 'running' || item.status === 'not_run') {
+                                return
+                            }
+                            needCall = false
+                            props.onAllRan?.(item.counters as StateCounters)
+                        })
+                    }
+                    // if non-case, don't switch to it
+                    if (item.record?.kind !== "case") {
+                        runAction()
+                        return
+                    }
+
+                    // for case, switch to it, and use the 'request' button
+                    // on the interface
+                    //
+                    if (props.onClickCaseRun) {
+                        // switch to the case
+                        const switchAction = getSelectAction(item, controller)
+                        if (!switchAction) {
+                            props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index)
+                            return
+                        }
+                        const action = () => switchAction().then(() => props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index))
+                        if (!props.checkBeforeSwitch) {
+                            action()
+                            return
+                        }
+                        props.checkBeforeSwitch(action)
+                        return
+                    }
+
+                    runAction()
+
+                    // for case, switch to it, and use the 'request' button
+                    // on the interface
+                    //
+                    // const selectAction = getSelectAction(item, controller)
+                    // const action = async () => {
+                    //     await selectAction?.()
+                    //     if (props.onClickCaseRun) {
+                    //         props.onClickCaseRun()
+                    //     } else {
+                    //         runAction()
+                    //     }
+                    // }
+                    // if (!props.checkBeforeSwitch) {
+                    //     action()
                     //     return
                     // }
-                    runItem(item, controller.path, () => {
-                        // get the update-to-date item
-                        const item = controller.item
-                        if (!needCall) {
-                            return
-                        }
-                        if (!isRoot) {
-                            return
-                        }
-                        // debug
-                        // if (item.key === "/_0") {
-                        //     console.log("item update:", controller.item)
-                        // }
-                        // root
-                        if (item.status === 'running' || item.status === 'not_run') {
-                            return
-                        }
-                        needCall = false
-                        props.onAllRan?.(item.counters as StateCounters)
-                    })
+                    // props.checkBeforeSwitch(action)
                 }}
             />}
         />

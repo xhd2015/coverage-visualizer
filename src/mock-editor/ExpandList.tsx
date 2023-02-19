@@ -421,7 +421,7 @@ export interface SelectBundle<T extends ExpandItem & { children?: T[] }> {
     selectedController: ItemControllerExt<T>
     setSelectedController: React.Dispatch<React.SetStateAction<ItemControllerExt<T>>>
 
-    getSelectAction: (item: T, controller: ItemController<T>) => (() => void)
+    getSelectAction: (item: T, controller: ItemController<T>) => (() => Promise<void>)
 }
 
 export function useSelect<T extends ExpandItem & { children?: T[] }>(props: SelectProps<T>): SelectBundle<T> {
@@ -434,9 +434,9 @@ export function useSelect<T extends ExpandItem & { children?: T[] }>(props: Sele
         if (selectedController?.id === controller.id) {
             return
         }
-        const action = () => {
-            const begin = new Date().getTime()
-            console.log("action begin")
+        const action = async () => {
+            // const begin = new Date().getTime()
+            // console.log("DEBUG action begin")
             // clear prev
             if (selectedController) {
                 selectedController.removeAttachedListener?.()
@@ -450,8 +450,8 @@ export function useSelect<T extends ExpandItem & { children?: T[] }>(props: Sele
             setSelectedController({ ...controller, removeAttachedListener: removeAttachedListener })
             controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
             onSelectChangeRef.current?.(item, controller.root, controller.index)
-            const end = new Date().getTime()
-            console.log("action end:", end - begin)
+            // const end = new Date().getTime()
+            // console.log("DEBUG action end:", end - begin)
         }
         return action
     }, [])

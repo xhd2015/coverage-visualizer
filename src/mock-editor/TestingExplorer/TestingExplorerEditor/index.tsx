@@ -31,10 +31,11 @@ export interface ExtensionData {
 // 15. fix assert error not effective
 
 export interface TestingExplorerEditorControl {
-
+    clearResponse: () => void
+    request: (caseData: TestingCase) => Promise<void>
 }
 
-export function useTest(): MutableRefObject<TestingExplorerEditorControl> {
+export function useTestingExplorerEditorController(): MutableRefObject<TestingExplorerEditorControl> {
     return useRef<TestingExplorerEditorControl>()
 }
 
@@ -51,7 +52,7 @@ export interface TestingExplorerEditorProps {
     save?: (caseName: string, caseData: TestingCase) => Promise<void>
     request?: (req: TestingRequestV2) => Promise<TestingResponseV2<ExtensionData> | undefined>
 
-    pendingAction?: () => void
+    pendingAction?: () => Promise<void>
 
     controlRef?: MutableRefObject<TestingExplorerEditorControl>
     style?: CSSProperties;
@@ -79,19 +80,23 @@ export default function (props: TestingExplorerEditorProps) {
     }, [props.pendingAction])
 
     const [config, setConfig] = useState<TestingCaseConfig>()
-    useEffect(() => {
-        if (!data && !respData) {
-            return setConfig({ name: nameRef.current })
-        }
-        setConfig({
-            name: nameRef.current,
+
+    const getConfig = (data: TestingCase, name: string) => {
+        return {
+            name: name,
             request: stringifyDataIndent(data?.Request),
             comment: data.Comment,
             skip: data.Skip,
             expectErr: !!data.AssertError,
             expectErrStr: data.AssertError,
             expectResponse: !data.AssertError ? stringifyDataIndent(data.Asserts) : "",
-        })
+        }
+    }
+    useEffect(() => {
+        if (!data && !respData) {
+            return setConfig({ name: nameRef.current })
+        }
+        setConfig(getConfig(data, nameRef.current))
     }, [data])
     const configRef = useCurrent(config)
 
@@ -188,11 +193,13 @@ export default function (props: TestingExplorerEditorProps) {
 
     const requestRef = useCurrent(props.request)
     const [requesting, setRequesting] = useState(false)
-    const requestHandler = async () => {
+
+    const requestWithConfig = async (config: TestingCaseConfig, mockData: MockData, noSave?: boolean) => {
+        console.log("req with config:", config)
         if (controllerRef.current.requesting) {
             return
         }
-        if (saveBeforeRequestRef.current !== false && saveRef.current) {
+        if (!noSave && saveBeforeRequestRef.current !== false && saveRef.current) {
             await saveRef.current(configRef.current?.name, getCaseData())
         }
         if (!requestRef.current) {
@@ -202,13 +209,13 @@ export default function (props: TestingExplorerEditorProps) {
         setRespData(undefined)
         controllerRef.current.setRequesting(true)
         setRequesting(true)
-        const config = controllerRef.current.config
+        // const config = controllerRef.current.config
         requestRef.current?.({
             request: config.request,
             assertIsErr: config.expectErr,
             assertError: config.expectErrStr,
             asserts: config.expectResponse,
-            mock: stringifyData(serializeMockData(mockRef.current)), // serialize so that resp have correct type instead of raw string
+            mock: stringifyData(serializeMockData(mockData)), // serialize so that resp have correct type instead of raw string
         } as TestingRequestV2
         ).then((respData: TestingResponseV2<ExtensionData>) => {
             setRespData(respData)
@@ -217,6 +224,21 @@ export default function (props: TestingExplorerEditorProps) {
             setRequesting(false)
         })
     }
+    const requestHandler = async () => {
+        await requestWithConfig(controllerRef.current.config, mockRef.current)
+    }
+    if (props.controlRef) {
+        props.controlRef.current = {
+            clearResponse() {
+                setRespData(undefined)
+            },
+            request: (caseData): Promise<void> => {
+                requestWithConfig(getConfig(caseData, ""), caseData?.Mock, true)
+                return
+            }
+        }
+    }
+
     return <TestingEditor
         config={config}
         result={result}

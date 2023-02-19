@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { CSSProperties, useEffect, useState } from "react";
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
 import { AddCaseRequest, addDir, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, TestingItem } from "./testing-api";
-import { ExtensionData } from "./TestingExplorerEditor";
+import { ExtensionData, useTestingExplorerEditorController } from "./TestingExplorerEditor";
 import { demoAPI as listDemoAPI } from "./TestingList/TestingListDemo";
 
 import { useCurrent } from "../react-hooks";
@@ -21,45 +21,55 @@ export interface TestingExplorerDemoProps {
 }
 
 export default function (props: TestingExplorerDemoProps) {
+    const editorControllerRef = useTestingExplorerEditorController()
     const [testingItems, setTestingItems] = useState<TestingItem[]>()
 
-    const refresh = () => {
-        axios({ url: listCaseURL, method: "GET" }).then(e => {
-            const resp: ListCaseResp = e.data?.data
-            const item = buildTestingItemV2(resp.root)
-            setTestingItems(item ? [item] : [])
-        })
+    const refresh = async () => {
+        const e = await axios({ url: listCaseURL, method: "GET" })
+        const resp: ListCaseResp = e.data?.data
+        const item = buildTestingItemV2(resp.root)
+        setTestingItems(item ? [item] : [])
     }
     useEffect(() => {
         refresh()
     }, [])
 
-    const [curItem, setItem] = useState<TestingItem>()
+    // const [curItem, setItem] = useState<TestingItem>()
+
+    type ItemBundle = {
+        item: TestingItem,
+        action?: (caseData: TestingCase) => void
+    }
+    const [itemBundle, setItemBundle] = useState<ItemBundle>()
 
     const [mockInfo, setMockInfo] = useState<MockInfo>()
     const [caseData, setCaseData] = useState<TestingCase>()
+
+    const curItem = itemBundle?.item
+
     // get the case
     // ping localhost:16000 first
-
-    useEffect(() => {
-        if (curItem?.kind === "case") {
-            if (!curItem) {
-                setCaseData(undefined)
-            } else {
-                demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number).then(setCaseData)
-            }
-        } else {
-            // clear data
-            setCaseData(undefined)
-        }
-    }, [curItem])
     const curItemRef = useCurrent(curItem)
+    const reloadItem = async (curItem: TestingItem, action: (caseData: TestingCase) => void) => {
+        console.log("act run:")
+        let caseData: TestingCase
+        if (curItem?.kind === "case") {
+            caseData = await demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number)
+        }
+        setCaseData(caseData)
+        editorControllerRef.current?.clearResponse?.()
+        action?.(caseData)
+        return caseData
+    }
+    useEffect(() => {
+        reloadItem(itemBundle?.item, itemBundle?.action)
+    }, [itemBundle])
 
     useEffect(() => {
         demoAPI.loadMockInfo().then(setMockInfo)
     }, [])
 
-    const [pendingAction, setPendingAction] = useState<() => void>()
+    const [pendingAction, setPendingAction] = useState<() => Promise<void>>()
 
     return <div
         className={props.className}
@@ -85,6 +95,16 @@ export default function (props: TestingExplorerDemoProps) {
                 },
                 checkBeforeSwitch(action) {
                     setPendingAction(() => action)
+                },
+                async onClickCaseRun(item, root, index) {
+                    setItemBundle({
+                        item,
+                        action: async (caseData: TestingCase) => {
+                            // avoid loading items twice
+                            editorControllerRef.current?.request?.(caseData)
+                        }
+                    })
+                    // console.log("clickCaseRun:", item)
                 },
 
                 //     const [show, setShow] = useState(false)
@@ -209,7 +229,8 @@ export default function (props: TestingExplorerDemoProps) {
                     },
                 },
                 onSelectChange(item, root, index) {
-                    setItem(item)
+                    setItemBundle({ item })
+                    // setItem(item)
                 },
             }}
             editorProps={{
@@ -217,6 +238,7 @@ export default function (props: TestingExplorerDemoProps) {
                 mockInfo,
                 caseData,
                 pendingAction: pendingAction,
+                controlRef: editorControllerRef,
                 async save(caseName, caseData: TestingCase) {
                     if (curItemRef.current?.kind === "case") {
                         await demoAPI.saveCase(curItemRef?.current?.method as string, curItemRef?.current?.path as string, curItemRef.current?.id as number, caseName, caseData).finally(() => {

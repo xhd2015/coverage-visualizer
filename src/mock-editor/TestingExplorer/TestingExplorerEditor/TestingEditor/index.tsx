@@ -68,7 +68,7 @@ export interface TestingEditorControl {
     readonly requesting: boolean
     setRequesting: (requesting: boolean) => void
 
-    confirmOrDo: (action: () => void) => void
+    confirmOrDo: (action: () => Promise<void>) => void
 }
 
 export interface TestingEditorProps {
@@ -162,7 +162,7 @@ export default function (props: TestingEditorProps) {
     //     setModified(false)
     // }, [props.initialValue])
 
-    const [action, setAction] = useState<() => void>()
+    const [action, setAction] = useState<() => Promise<void>>()
     if (props.controllerRef) {
         props.controllerRef.current = {
             saving,
