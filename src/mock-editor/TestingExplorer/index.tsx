@@ -1,8 +1,8 @@
+import React from "react";
 import { CSSProperties } from "react";
-import ColResizeBar from "../support/components/v2/ColResizeBar";
-import { notifyRootResize } from "./context";
-import LayoutLeftRight from "./support/LayoutLeftRight";
-import { API } from "./testing-api";
+import ColResizeBar from "../../support/components/v2/ColResizeBar";
+import { notifyRootResize } from "../context";
+import LayoutLeftRight from "../support/LayoutLeftRight";
 import TestingExplorerEditor, { TestingExplorerEditorProps } from "./TestingExplorerEditor";
 import TestingList, { TestingListProps } from "./TestingList";
 

@@ -1,7 +1,8 @@
-import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
-import { API } from "./testing-api";
-import TestingExplorerEditor from "./TestingExplorerEditor";
 import axios from "axios";
+import TestingExplorerEditor from ".";
+import { transObject } from "../parse";
+import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "../testing";
+import { API } from "../testing-api";
 
 const schemaURL = 'http://localhost:16000/api/mock/infoAll?endpoint=localhost:16000'
 const testingURL = "http://localhost:16000/api/endpoint/test"
@@ -52,30 +53,6 @@ export const demoAPI: API = {
     },
 }
 
-export function tryParse(s: string | Object): Object {
-    if (typeof s !== 'string') {
-        return s as Object
-    }
-    if (!s) {
-        return undefined
-    }
-    try {
-        return JSON.parse(s)
-    } catch (e) {
-        return undefined
-    }
-}
-
-function transObject(req: TestingRequestV2): TestingRequestV2 {
-    const n = { ...req }
-    n.request = tryParse(n.request)
-    n.asserts = tryParse(n.asserts)
-    n.assertMockRecord = tryParse(n.assertMockRecord)
-    // TODO: typesafe
-    n["mockData"] = tryParse(n.mock)
-    delete n.mock
-    return n
-}
 function capObj<T>(s: T): T {
     const v = {} as T
     for (let key in s) {

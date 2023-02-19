@@ -1,9 +1,9 @@
+import React from "react";
+import { TestingAPI } from ".";
+import { ItemPath } from "../../List";
+import { RunStatus } from "../testing";
+import { TestingItem } from "../testing-api";
 
-import { ItemPath } from "./List";
-import { RunStatus } from "./testing";
-import { TestingItem } from "./testing-api";
-import TestingList, { TestingAPI } from "./TestingList";
-import { throttle } from "./util/throttle";
 
 function randList<T>(list: T[]): T {
     return list[Math.floor(Math.random() * list.length)]

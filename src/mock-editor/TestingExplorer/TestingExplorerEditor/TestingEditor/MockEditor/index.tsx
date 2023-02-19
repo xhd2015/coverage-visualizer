@@ -1,22 +1,22 @@
 import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
-import { useCurrent } from "./react-hooks";
-import TraceList from "./TraceList";
+import { useCurrent } from "../../../../react-hooks";
+import TraceList from "../../TraceList";
 
 import { editor } from "monaco-editor";
 import { BsFileEarmarkCheck } from "react-icons/bs";
 import { GoFileCode } from "react-icons/go";
 import { VscDebugAlt, VscJson, VscReply } from "react-icons/vsc";
-import ColResizeBar from "../support/components/v2/ColResizeBar";
-import JSONEditor from "./JSONEditor";
-import JSONEditorSchema from "./JSONEditorSchema";
-import { ItemIndex } from "./List";
-import CopyClipboard from "./support/CopyClipboard";
-import Icon from "./support/Icon";
-import LayoutLeftRight from "./support/LayoutLeftRight";
-import RadioGroup from "./support/RadioGroup";
-import { SchemaResult } from "./testing";
-import TextEditor from "./TextEditor";
-import { CallRecord } from "./trace-types";
+import ColResizeBar from "../../../../../support/components/v2/ColResizeBar";
+import JSONEditor from "../../../../JSONEditor";
+import JSONEditorSchema from "../../../../JSONEditorSchema";
+import { ItemIndex } from "../../../../List";
+import CopyClipboard from "../../../../support/CopyClipboard";
+import Icon from "../../../../support/Icon";
+import LayoutLeftRight from "../../../../support/LayoutLeftRight";
+import RadioGroup from "../../../../support/RadioGroup";
+import TextEditor from "../../../../TextEditor";
+import { SchemaResult } from "../../../testing";
+import { CallRecord } from "../../TraceList/trace-types";
 
 export interface TraceItem {
     item: CallRecord;

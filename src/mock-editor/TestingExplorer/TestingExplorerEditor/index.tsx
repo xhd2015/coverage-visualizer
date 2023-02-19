@@ -1,14 +1,13 @@
-import { CSSProperties, MutableRefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import MockEditor, { MockData as MockEditorData, MockEditorControl, TraceItem } from "./MockEditor";
-import { useCurrent } from "./react-hooks";
-import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
-import { API } from "./testing-api";
+import { debounce } from "lodash";
+import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
+import { useCurrent } from "../../react-hooks";
+import { objectifyData, stringifyData, stringifyDataIndent } from "../../util/format";
+import { tryParse } from "../parse";
+import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "../testing";
 import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorControl } from "./TestingEditor";
-import "./TestingEditor.css";
-import { tryParse } from "./TestingExplorerEditorDemo";
-import { RootRecord } from "./trace-types";
-import { objectifyData, stringifyData, stringifyDataIndent } from "./util/format";
-import { debounce } from "lodash"
+import MockEditor, { MockEditorControl, TraceItem } from "./TestingEditor/MockEditor";
+import "./TestingEditor/TestingEditor.css";
+import { RootRecord } from "./TraceList/trace-types";
 
 export interface ExtensionData {
     trace?: RootRecord

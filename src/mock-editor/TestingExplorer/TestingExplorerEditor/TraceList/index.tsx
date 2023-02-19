@@ -2,13 +2,12 @@
 import { Tag } from "antd"
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
 import { VscCollapseAll } from "react-icons/vsc"
-import ExpandList, { ExpandItem, ItemController, useExpandListController } from "./ExpandList"
-import { ItemIndex } from "./List"
-import { useCurrent } from "./react-hooks"
-import Checkbox from "./support/Checkbox"
+import ExpandList, { ExpandItem, ItemController, useExpandListController } from "../../../ExpandList"
+import { ItemIndex } from "../../../List"
+import { useCurrent } from "../../../react-hooks"
+import Checkbox from "../../../support/Checkbox"
 import { CallRecord } from "./trace-types"
-import { filter, map } from "./tree"
-
+import { filter, map } from "../../../tree"
 
 const errorColor = "#DA2829"  // red
 const panicColor = "#ffb500"  // orange-like

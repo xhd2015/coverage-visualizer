@@ -1,6 +1,6 @@
 import axios, { AxiosRequestConfig } from "axios"
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing"
-import { map, traverse } from "./tree"
+import { map, traverse } from "../tree"
 
 
 export interface API {

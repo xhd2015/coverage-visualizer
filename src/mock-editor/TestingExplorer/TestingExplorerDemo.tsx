@@ -1,15 +1,15 @@
-import { useEffect, useState, CSSProperties } from "react";
-import TestingExplorer from "./TestingExplorer";
-import { demoAPI } from "./TestingExplorerEditorDemo";
-import { demoData, demoAPI as listDemoAPI } from "./TestingListDemo";
-import axios from "axios"
-import { traverse } from "./tree";
+import axios from "axios";
+import React, { CSSProperties, useEffect, useState } from "react";
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
-import { AddCaseRequest, addDir, AddDirRequest, buildTestingItem, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, RenameDirRequest, TestingItem } from "./testing-api";
+import { AddCaseRequest, addDir, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, TestingItem } from "./testing-api";
 import { ExtensionData } from "./TestingExplorerEditor";
-import { stringifyData } from "./util/format";
+import { demoAPI as listDemoAPI } from "./TestingList/TestingListDemo";
+
+import { useCurrent } from "../react-hooks";
+import { stringifyData } from "../util/format";
+import { demoAPI } from "./TestingExplorerEditor/TestingExplorerEditorDemo";
 import { Options } from "./TestingList";
-import { useCurrent } from "./react-hooks";
+import TestingExplorer from ".";
 
 const listCaseURL = 'http://localhost:16000/api/case/listAll?noCaseList=true'
 const updateSummaryURL = 'http://localhost:16000/api/summary/update'

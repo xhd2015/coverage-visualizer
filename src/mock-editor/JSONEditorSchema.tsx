@@ -1,17 +1,14 @@
 
-import { editor } from "monaco-editor";
-import JSONEditor, { JSONEditorProps } from "./JSONEditor";
-import { SchemaResult } from "./testing";
 import * as monaco from "monaco-editor";
-import "./TestingEditor.css";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { editor } from "monaco-editor";
+import { useCallback, useRef } from "react";
+import JSONEditor, { JSONEditorProps } from "./JSONEditor";
 import { useCurrent } from "./react-hooks";
-
+import { SchemaResult } from "./TestingExplorer/testing";
 
 export interface JSONEditorSchemaProps extends JSONEditorProps {
     schema?: SchemaResult
 }
-
 
 // const jsonSchemas :{[key:string]: }= {}
 

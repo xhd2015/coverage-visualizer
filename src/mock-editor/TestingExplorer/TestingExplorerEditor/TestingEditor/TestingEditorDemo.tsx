@@ -1,9 +1,8 @@
-import callRecord from "./testdata.json";
-
-import { useRef } from "react";
+import callRecord from "../../testdata.json";
+import React, { useRef } from "react";
 import MockEditor, { MockData as MockEditorData } from "./MockEditor";
-import TestingEditor from "./TestingEditor";
 import "./TestingEditor.css";
+import TestingEditor from ".";
 
 export default function () {
     const simpleMockMap = useRef<{ [key: string]: MockEditorData }>({})

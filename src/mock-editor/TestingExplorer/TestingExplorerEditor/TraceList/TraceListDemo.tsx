@@ -1,6 +1,7 @@
-import { CSSProperties } from "react"
-import { ItemIndex } from "./List"
-import TraceList, { CallRecord } from "./TraceList"
+import React, { CSSProperties } from "react"
+import TraceList from "."
+import { ItemIndex } from "../../../List"
+import { CallRecord } from "./trace-types"
 
 
 type CallRecordPartial = Omit<Partial<CallRecord>, "children"> & {

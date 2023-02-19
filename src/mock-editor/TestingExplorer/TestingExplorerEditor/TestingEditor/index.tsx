@@ -1,13 +1,12 @@
 import { debounce } from "lodash";
-import { useEffect, useState } from "react";
-import { useCurrent } from "./react-hooks";
-import Checkbox from "./support/Checkbox";
-import EditView from "./support/EditView";
-
-import Button from "./support/Button";
+import React, { useEffect, useState } from "react";
+import { useCurrent } from "../../../react-hooks";
+import Button from "../../../support/Button";
+import Checkbox from "../../../support/Checkbox";
+import { ConfirmDialog } from "../../../support/Dialog";
+import EditView from "../../../support/EditView";
+import TextEditor from "../../../TextEditor";
 import "./TestingEditor.css";
-import TextEditor from "./TextEditor";
-import { ConfirmDialog } from "./support/Dialog";
 
 export interface TestingCaseConfig {
     name: string

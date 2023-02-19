@@ -1,24 +1,23 @@
 
 import { createElement, CSSProperties, FunctionComponent, useEffect, useMemo, useRef, useState } from "react"
-import { VscCollapseAll, VscNewFolder } from "react-icons/vsc"
-import ExpandList, { ExpandItem, ItemController, useExpandListController, useSelect } from "./ExpandList"
-import { ItemIndex, ItemPath } from "./List"
-import { useCurrent } from "./react-hooks"
-import { filter, map, traverse } from "./tree"
-
 import { AiOutlineCheckCircle, AiOutlineClockCircle, AiOutlineCloseCircle, AiOutlineExclamationCircle, AiOutlineMinusCircle, AiOutlinePlus } from "react-icons/ai"
 import { BsCircle } from "react-icons/bs"
-import { allStatus, RunStatus } from "./testing"
+import { VscNewFolder } from "react-icons/vsc"
 
 import { MdContentCopy } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
 import { VscPlay } from "react-icons/vsc"
-import Checkbox from "./support/Checkbox"
-import { throttle } from "./util/throttle"
-import { TestingItem } from "./testing-api"
 
+import { filter, throttle } from "lodash"
+import ExpandList, { ExpandItem, ItemController, useExpandListController, useSelect } from "../../ExpandList"
+import { ItemIndex, ItemPath } from "../../List"
+import { useCurrent } from "../../react-hooks"
+import ToolBar from "../../support/ToolBar"
+import { map, traverse } from "../../tree"
+import { allStatus, RunStatus } from "../testing"
+import { TestingItem } from "../testing-api"
 import "./TestingList.css"
-import ToolBar from "./support/ToolBar"
+import Checkbox from "../../support/Checkbox"
 
 type StateCounters = Record<RunStatus, number>
 
@@ -240,7 +239,6 @@ export default function (props: TestingListProps) {
             })
         }
     }
-
 
     // console.log("final items:", items)
     return <div style={{
