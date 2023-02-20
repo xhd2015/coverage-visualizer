@@ -7,7 +7,7 @@ import { ItemIndex } from "../../../List"
 import { useCurrent } from "../../../react-hooks"
 import Checkbox from "../../../support/Checkbox"
 import { CallRecord } from "./trace-types"
-import { filter, map } from "../../../tree"
+import { filter, map, traverse } from "../../../tree"
 
 const errorColor = "#DA2829"  // red
 const panicColor = "#ffb500"  // orange-like
@@ -21,6 +21,9 @@ export interface CallRecordItem extends ExpandItem {
 
     needMock?: boolean
     mocked?: boolean
+
+    currentCallIndex?: number
+    totalCalls?: number
 
     contentStyle?: CSSProperties
     children?: CallRecordItem[]
@@ -55,19 +58,38 @@ export default function (props: TraceListProps) {
 
     // id is stable
     const initItems = useMemo(() => {
+        const getRecordKey = (e: CallRecord) => `${e.pkg}.${e.func}`
+        const totalByFunc = new Map<string, number>()
+        const indexByFunc = new Map<string, number>()
+        traverse(props.records, e => {
+            const key = getRecordKey(e)
+            totalByFunc.set(key, (totalByFunc.get(key) || 0) + 1)
+        })
+        totalByFunc.forEach((v, k) => {
+            indexByFunc.set(k, 0)
+        })
+        console.log("t:", totalByFunc, indexByFunc)
+
         // let id = 1
-        const items = map<CallRecord, CallRecordItem>(props.records, (e, children, idx): CallRecordItem => ({
-            record: e as CallRecord,
-            children,
-            leaf: !children?.length,
-            key: `${e.func}_${idx}${debugKey ? "_" + versionRef.current : ""}`, // will not change as long as records not change
-            // needMock:,
-            // mocked:
-            ...getMockPropertyRef?.current?.(e),
-            itemStyle: {
-                userSelect: "text"
+        const items = map<CallRecord, CallRecordItem>(props.records, (e, children, idx): CallRecordItem => {
+            const key = getRecordKey(e)
+            const keyIdx = indexByFunc.get(key)
+            indexByFunc.set(key, keyIdx + 1)
+            return {
+                record: e as CallRecord,
+                children,
+                leaf: !children?.length,
+                key: `${e.func}_${idx}${debugKey ? "_" + versionRef.current : ""}`, // will not change as long as records not change
+                // needMock:,
+                // mocked:
+                ...getMockPropertyRef?.current?.(e),
+                itemStyle: {
+                    userSelect: "text"
+                },
+                currentCallIndex: keyIdx,
+                totalCalls: totalByFunc.get(key),
             }
-        }))
+        })
         return items
     }, [props.records])
 
@@ -207,6 +229,10 @@ export function ItemRender(props: { item: CallRecordItem, controller: ItemContro
                 (item.record.error ? <Tag style={{ color: greyColor, marginLeft: "5px", padding: "1px" }} >error</Tag> : undefined)
         }
         <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{formatCost(item.record.end - item.record.start)}</div>
+
+        {
+            item?.totalCalls > 1 && item?.currentCallIndex >= 0 && <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{`${item?.currentCallIndex + 1}/${item?.totalCalls}`}</div>
+        }
     </div>
 }
 function formatCost(ns: number): string {
