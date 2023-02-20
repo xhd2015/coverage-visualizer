@@ -1,6 +1,6 @@
 import axios from "axios";
 import React, { CSSProperties, useEffect, useState } from "react";
-import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
+import { getRespStatus, MockInfo, RunStatus, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
 import { AddCaseRequest, addDir, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, TestingItem } from "./testing-api";
 import { ExtensionData, useTestingExplorerEditorController } from "./TestingExplorerEditor";
 import { demoAPI as listDemoAPI } from "./TestingList/TestingListDemo";
@@ -51,19 +51,23 @@ export default function (props: TestingExplorerDemoProps) {
     // ping localhost:16000 first
     const curItemRef = useCurrent(curItem)
     const reloadItem = async (curItem: TestingItem, action: (caseData: TestingCase) => void) => {
-        console.log("act run:")
+        // console.log("reload case:", curItem)
         let caseData: TestingCase
         if (curItem?.kind === "case") {
             caseData = await demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number)
         }
         setCaseData(caseData)
-        editorControllerRef.current?.clearResponse?.()
         action?.(caseData)
         return caseData
     }
+
     useEffect(() => {
+        // console.log("reload case onChange:", itemBundle?.item)
         reloadItem(itemBundle?.item, itemBundle?.action)
-    }, [itemBundle])
+    },
+        [itemBundle?.item?.kind, itemBundle?.item?.method, itemBundle?.item?.path, itemBundle?.item?.id]
+        // destruct basic data so change won't overkill
+    )
 
     useEffect(() => {
         demoAPI.loadMockInfo().then(setMockInfo)
@@ -96,12 +100,19 @@ export default function (props: TestingExplorerDemoProps) {
                 checkBeforeSwitch(action) {
                     setPendingAction(() => action)
                 },
-                async onClickCaseRun(item, root, index) {
+                async onClickCaseRun(item, root, index, update) {
+                    // console.log("reload case onClick:", item)
                     setItemBundle({
                         item,
                         action: async (caseData: TestingCase) => {
+                            editorControllerRef.current?.clearResponse?.()
                             // avoid loading items twice
-                            editorControllerRef.current?.request?.(caseData)
+                            const resp = await editorControllerRef.current?.request?.(caseData)
+                            const status = getRespStatus(resp)
+                            update(item => ({
+                                ...item,
+                                status: status,
+                            }))
                         }
                     })
                     // console.log("clickCaseRun:", item)
@@ -213,13 +224,7 @@ export default function (props: TestingExplorerDemoProps) {
                             asserts: stringifyData(usedCaseData?.Asserts),
                             mock: stringifyData(usedCaseData.Mock), // serialize so that resp have correct type instead of raw string
                         } as TestingRequestV2)
-                        if (resp.AssertResult?.success) {
-                            return "success"
-                        }
-                        if (!resp.AssertResult) {
-                            return "error"
-                        }
-                        return "fail"
+                        return getRespStatus(resp)
                     },
                     async addFolder(item, opts) {
                         await addDir(item.method as string, item.path as string, "TODO")
@@ -229,6 +234,7 @@ export default function (props: TestingExplorerDemoProps) {
                     },
                 },
                 onSelectChange(item, root, index) {
+                    // console.log("onSelectChange:", item)
                     setItemBundle({ item })
                     // setItem(item)
                 },

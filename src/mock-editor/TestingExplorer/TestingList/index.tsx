@@ -61,7 +61,7 @@ export interface TestingListProps {
 
     onTreeChangeRequested?: () => void
 
-    onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
+    onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex, update: (fn: (item: TestingStatItem) => TestingStatItem) => void) => void
 
     checkBeforeSwitch?: (action: () => Promise<void>) => void
 }
@@ -331,11 +331,14 @@ export default function (props: TestingListProps) {
                     if (props.onClickCaseRun) {
                         // switch to the case
                         const switchAction = getSelectAction(item, controller)
+                        const update = (fn: (item: TestingStatItem) => TestingStatItem) => {
+                            controller.dispatchUpdate(fn)
+                        }
                         if (!switchAction) {
-                            props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index)
+                            props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update)
                             return
                         }
-                        const action = () => switchAction().then(() => props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index))
+                        const action = () => switchAction().then(() => props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update))
                         if (!props.checkBeforeSwitch) {
                             action()
                             return

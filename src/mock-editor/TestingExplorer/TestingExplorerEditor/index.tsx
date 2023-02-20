@@ -32,7 +32,7 @@ export interface ExtensionData {
 
 export interface TestingExplorerEditorControl {
     clearResponse: () => void
-    request: (caseData: TestingCase) => Promise<void>
+    request: (caseData: TestingCase) => Promise<TestingResponseV2<ExtensionData>>
 }
 
 export function useTestingExplorerEditorController(): MutableRefObject<TestingExplorerEditorControl> {
@@ -42,8 +42,6 @@ export function useTestingExplorerEditorController(): MutableRefObject<TestingEx
 export interface TestingExplorerEditorProps {
     caseName?: string
     caseData?: TestingCase
-
-
 
     mockInfo?: MockInfo
 
@@ -195,7 +193,7 @@ export default function (props: TestingExplorerEditorProps) {
     const [requesting, setRequesting] = useState(false)
 
     const requestWithConfig = async (config: TestingCaseConfig, mockData: MockData, noSave?: boolean) => {
-        console.log("req with config:", config)
+        // console.log("request with config:", config)
         if (controllerRef.current.requesting) {
             return
         }
@@ -209,20 +207,21 @@ export default function (props: TestingExplorerEditorProps) {
         setRespData(undefined)
         controllerRef.current.setRequesting(true)
         setRequesting(true)
-        // const config = controllerRef.current.config
-        requestRef.current?.({
-            request: config.request,
-            assertIsErr: config.expectErr,
-            assertError: config.expectErrStr,
-            asserts: config.expectResponse,
-            mock: stringifyData(serializeMockData(mockData)), // serialize so that resp have correct type instead of raw string
-        } as TestingRequestV2
-        ).then((respData: TestingResponseV2<ExtensionData>) => {
-            setRespData(respData)
-        }).finally(() => {
+        try {
+            const resp: TestingResponseV2<ExtensionData> = await requestRef.current?.({
+                request: config.request,
+                assertIsErr: config.expectErr,
+                assertError: config.expectErrStr,
+                asserts: config.expectResponse,
+                mock: stringifyData(serializeMockData(mockData)), // serialize so that resp have correct type instead of raw string
+            } as TestingRequestV2
+            )
+            setRespData(resp)
+            return resp
+        } finally {
             controllerRef.current.setRequesting(false)
             setRequesting(false)
-        })
+        }
     }
     const requestHandler = async () => {
         await requestWithConfig(controllerRef.current.config, mockRef.current)
@@ -232,9 +231,8 @@ export default function (props: TestingExplorerEditorProps) {
             clearResponse() {
                 setRespData(undefined)
             },
-            request: (caseData): Promise<void> => {
-                requestWithConfig(getConfig(caseData, ""), caseData?.Mock, true)
-                return
+            request: (caseData): Promise<TestingResponseV2<ExtensionData>> => {
+                return requestWithConfig(getConfig(caseData, ""), caseData?.Mock, true)
             }
         }
     }

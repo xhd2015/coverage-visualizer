@@ -24,6 +24,16 @@ export interface MockData {
     }
 }
 
+export function getRespStatus(resp: TestingResponseV2<any>): RunStatus {
+    if (resp.AssertResult?.success) {
+        return "success"
+    }
+    if (!resp.AssertResult) {
+        return "error"
+    }
+    return "fail"
+}
+
 export function serializeMockData(data: MockData): MockData {
     return mapObj(data, (pkgMapping: MockData["Mapping"]) => {
         return mapObj(pkgMapping, (funcMapping: typeof pkgMapping[""]) => {
