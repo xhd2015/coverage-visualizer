@@ -1,6 +1,6 @@
 import callRecord from "../../testdata.json";
 import React, { useRef } from "react";
-import MockEditor, { MockData as MockEditorData } from "./MockEditor";
+import MockEditor, { MockEditData as MockEditorData } from "./MockEditor";
 import "./TestingEditor.css";
 import TestingEditor from ".";
 

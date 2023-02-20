@@ -134,7 +134,7 @@ export default function Code(props: IProps) {
 
     // apply model
     useEffect(() => {
-        console.log("version change:", version, model?.fileKey, model, editorRef.current)
+        // console.log("DEBUG version change:", version, model?.fileKey, model, editorRef.current)
         if (model && model.model && !model.model.isDisposed()) {
             editorRef.current.setModel?.(model.model)
             // apply diff model

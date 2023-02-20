@@ -474,7 +474,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
     let modelOpts = fileModels[fileKey];
     if (!modelOpts) {
         const fd = await fileDetailGetter?.getDetail?.(file)
-        console.log("get file detail:", file, fd)
+        // console.log("DEBUG get file detail:", file, fd)
         if (!fd) {
             modelOpts = {
                 model: monaco.editor.createModel(

@@ -90,7 +90,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
 
         const resolving = new Promise(async (resolve, reject) => {
             const fd = await fileDetailGetter?.getDetail?.(file)
-            console.log("get file detail:", file, fd)
+            // console.log("DEBUG get file detail:", file, fd)
             try {
                 let model: monaco.editor.ITextModel
                 if (!fd) {
@@ -136,7 +136,7 @@ export async function getEditorModel(file: string, fileModels: { [file: string]:
         modelOpts.resolving = resolving
         try {
             await resolving
-            console.log("fileKey resolved:", fileKey)
+            // console.log("DEBUG fileKey resolved:", fileKey)
         } finally {
             modelOpts.resolving = null
         }
@@ -193,13 +193,13 @@ export function useMonacoModel(props: modelProps): FileOptions | null {
             { readonly: props.readonly }
         )
 
-        console.log("updating model:", props.uriPrefix, props.file, opts)
+        // console.log("DEBUG updating model:", props.uriPrefix, props.file, opts)
         setModel(opts)
         setModelVersion(modelVersion + 1)
         return
     }
     useEffect(() => {
-        console.log("file change:", props.file, fileGetterVersion)
+        // console.log("DEBUG file change:", props.file, fileGetterVersion)
         updateContent()
     }, [props.file, fileGetterVersion, props.contentDecorator])
 

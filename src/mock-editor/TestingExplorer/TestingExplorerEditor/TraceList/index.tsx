@@ -1,6 +1,6 @@
 
 import { Tag } from "antd"
-import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
+import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react"
 import { VscCollapseAll } from "react-icons/vsc"
 import ExpandList, { ExpandItem, ItemController, useExpandListController } from "../../../ExpandList"
 import { ItemIndex } from "../../../List"
@@ -22,11 +22,15 @@ export interface CallRecordItem extends ExpandItem {
     needMock?: boolean
     mocked?: boolean
 
-    currentCallIndex?: number
-    totalCalls?: number
-
     contentStyle?: CSSProperties
     children?: CallRecordItem[]
+}
+
+export interface TraceListController {
+    refreshMockProperty: () => void
+}
+export function useTraceListController(): MutableRefObject<TraceListController> {
+    return useRef<TraceListController>()
 }
 
 export interface TraceListProps {
@@ -36,7 +40,9 @@ export interface TraceListProps {
     // style for the root container
     style?: CSSProperties
 
-    getMockProperty?: (e: CallRecord) => { needMock?: boolean, mocked?: boolean },
+    getMockProperty?: (e: CallRecord) => { needMock?: boolean, mocked?: boolean }
+
+    controllerRef?: MutableRefObject<TraceListController>
 
     onSelectChange?: (item: CallRecord, root: CallRecord, index: ItemIndex) => void
 }
@@ -56,25 +62,12 @@ export default function (props: TraceListProps) {
 
     const getMockPropertyRef = useCurrent(props.getMockProperty)
 
+    const [itemsVersion, setItemsVersion] = useState(0)
+
     // id is stable
     const initItems = useMemo(() => {
-        const getRecordKey = (e: CallRecord) => `${e.pkg}.${e.func}`
-        const totalByFunc = new Map<string, number>()
-        const indexByFunc = new Map<string, number>()
-        traverse(props.records, e => {
-            const key = getRecordKey(e)
-            totalByFunc.set(key, (totalByFunc.get(key) || 0) + 1)
-        })
-        totalByFunc.forEach((v, k) => {
-            indexByFunc.set(k, 0)
-        })
-        console.log("t:", totalByFunc, indexByFunc)
-
         // let id = 1
         const items = map<CallRecord, CallRecordItem>(props.records, (e, children, idx): CallRecordItem => {
-            const key = getRecordKey(e)
-            const keyIdx = indexByFunc.get(key)
-            indexByFunc.set(key, keyIdx + 1)
             return {
                 record: e as CallRecord,
                 children,
@@ -86,12 +79,10 @@ export default function (props: TraceListProps) {
                 itemStyle: {
                     userSelect: "text"
                 },
-                currentCallIndex: keyIdx,
-                totalCalls: totalByFunc.get(key),
             }
         })
         return items
-    }, [props.records])
+    }, [props.records, itemsVersion])
 
     const [items, setItems] = useState(initItems)
     const initItemsRef = useCurrent(initItems)
@@ -144,6 +135,15 @@ export default function (props: TraceListProps) {
             itemList = itemList[i].children
         }
     }, [items])
+
+    const ref = useCurrent({ itemsVersion })
+    if (props.controllerRef) {
+        props.controllerRef.current = {
+            refreshMockProperty() {
+                setItemsVersion(ref.current.itemsVersion + 1)
+            },
+        }
+    }
 
     const expandListController = useExpandListController<CallRecordItem>()
     // update selected status if source changed
@@ -231,7 +231,7 @@ export function ItemRender(props: { item: CallRecordItem, controller: ItemContro
         <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{formatCost(item.record.end - item.record.start)}</div>
 
         {
-            item?.totalCalls > 1 && item?.currentCallIndex >= 0 && <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{`${item?.currentCallIndex + 1}/${item?.totalCalls}`}</div>
+            item?.record?.callTotal > 1 && item?.record?.callIndex >= 0 && <div style={{ whiteSpace: "nowrap", color: greyColor, marginLeft: "5px" }}>{`${item?.record?.callIndex + 1}/${item?.record?.callTotal}`}</div>
         }
     </div>
 }

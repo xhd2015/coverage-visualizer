@@ -1,6 +1,6 @@
 import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useCurrent } from "../../../../react-hooks";
-import TraceList from "../../TraceList";
+import TraceList, { useTraceListController } from "../../TraceList";
 
 import { editor } from "monaco-editor";
 import { BsFileEarmarkCheck } from "react-icons/bs";
@@ -17,27 +17,21 @@ import RadioGroup from "../../../../support/RadioGroup";
 import TextEditor from "../../../../TextEditor";
 import { SchemaResult } from "../../../testing";
 import { CallRecord } from "../../TraceList/trace-types";
-
-export interface TraceItem {
-    item: CallRecord;
-    root: CallRecord;
-    index: ItemIndex;
-}
-export interface MockData {
-    mockMode: MockMode;
-    mockResp: string;
-    mockErr: string;
-}
+import { TraceItem, MockEditData, MockType, MockMode, RespEditorOption } from "../../types";
 
 export interface MockEditorControl {
     notifyMockChanged: () => void
+    notifyRespChanged: () => void
 }
 
 export interface MockEditorProps {
     callRecords?: CallRecord[]
 
-    getMock?: (item: TraceItem) => MockData | undefined
-    onMockChange?: (item: TraceItem, mockData: MockData) => void
+    getMock?: (item: TraceItem) => MockEditData | undefined
+    onMockChange?: (item: TraceItem, mockData: MockEditData, prevMockData: MockEditData) => void
+
+    mockType?: MockType
+    onMockTypeChange?: (item: TraceItem, mockData: MockEditData, mockType: MockType, prevMockType: MockType, next: () => void) => void
 
     onSelectChange?: (item: TraceItem) => void
 
@@ -50,7 +44,7 @@ export interface MockEditorProps {
 
     // the all mock info
     allMock?: string
-    // NOTE: if you changethe name to onSaveAllMock
+    // NOTE: if you change the name to onSaveAllMock
     // the click won't work, don't know why
     // onAllMockSave?: (val: string) => void
     onAllMockChange?: (val: string) => void
@@ -71,9 +65,6 @@ export interface MockEditorProps {
     onClickDebug?: () => void
 }
 
-type MockMode = "Mock Response" | "Mock Error" | "No Mock"
-type RespEditorOption = "Request" | "Response"
-
 export default function (props: MockEditorProps) {
     const [selectedItem, setSelectedItem] = useState<TraceItem>()
     const selectedRecord = selectedItem?.item
@@ -82,12 +73,17 @@ export default function (props: MockEditorProps) {
     // console.log("mockInJSON init:", mockInJSON)
     const mockInJSON = props.mockInJSON
 
-    const [mockData, setMockData] = useState<MockData>()
+    const [mockData, setMockData] = useState<MockEditData>()
 
     const [respMode, setRespMode] = useState<RespEditorOption>("Response")
     const [mockMode, setMockMode] = useState<MockMode>(mockData?.mockMode)
     const [mockResp, setMockResp] = useState<string>(mockData?.mockResp)
     const [mockErr, setMockErr] = useState<string>(mockData?.mockErr)
+
+    const [mockType, setMockType] = useState<MockType>(props.mockType)
+    useEffect(() => {
+        setMockType(props.mockType)
+    }, [props.mockType])
 
     const onSelectChangeRef = useCurrent(props.onSelectChange)
 
@@ -119,11 +115,14 @@ export default function (props: MockEditorProps) {
     const onMockChangeRef = useCurrent(props.onMockChange)
     const selectedItemRef = useCurrent(selectedItem)
     const calcMockData = useMemo(() => ({ mockMode, mockResp, mockErr }), [mockMode, mockResp, mockErr])
+    const [prevMockData, setPrevMockData] = useState<MockEditData>()
     useEffect(() => {
+        setPrevMockData(calcMockData)
         if (onMockChangeRef && selectedItemRef.current) {
-            onMockChangeRef.current(selectedItemRef.current, calcMockData)
+            onMockChangeRef.current(selectedItemRef.current, calcMockData, prevMockData)
         }
     }, [calcMockData])
+    const calcMockDataRef = useCurrent(calcMockData)
 
     const [traceContent, traceLang] = useMemo(() => {
         let content: string = ""
@@ -152,6 +151,7 @@ export default function (props: MockEditorProps) {
     // }, [props.callRecords])
 
     const checkNeedMockRef = useCurrent(props.checkNeedMock)
+    const traceListControllerRef = useTraceListController()
 
     const mockSetupEditorRef = useRef<editor.IStandaloneCodeEditor>()
     const mockErrEditorRef = useRef<editor.IStandaloneCodeEditor>()
@@ -162,8 +162,12 @@ export default function (props: MockEditorProps) {
             notifyMockChanged() {
                 updateStatusRef.current(selectedItemRef.current)
             },
+            notifyRespChanged() {
+                traceListControllerRef.current?.refreshMockProperty?.()
+            }
         }
     }
+
 
     return <LayoutLeftRight
         rootStyle={{
@@ -209,6 +213,7 @@ export default function (props: MockEditorProps) {
                     // overflowX: "hidden"
                     overflowX: "auto"
                 }}
+                controllerRef={traceListControllerRef}
                 getMockProperty={e => {
                     return {
                         mocked: e.mockStatus === "mock_error" || e.mockStatus === "mock_resp",
@@ -250,12 +255,19 @@ export default function (props: MockEditorProps) {
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-evenly" }}>
                         {
-                            !mockInJSON && <RadioGroup<MockMode>
+                            !mockInJSON && <> <RadioGroup<MockMode>
                                 options={["Mock Response", "Mock Error", "No Mock"]}
                                 value={mockMode || "No Mock"}
                                 onChange={setMockMode}
-
                             />
+                                <RenderMockType value={mockType} onChange={newMockType => {
+                                    if (selectedItemRef.current) {
+                                        props.onMockTypeChange?.(selectedItemRef.current, calcMockDataRef.current, newMockType, mockType, () => {
+                                            setMockType(newMockType)
+                                        })
+                                    }
+                                }} />
+                            </>
                         }
                         {
                             mockInJSON && <div>Mock Editor</div>
@@ -372,4 +384,14 @@ export default function (props: MockEditorProps) {
             </div>
         </>}
     />
+}
+
+function RenderMockType(props: { value?: MockType, onChange?: (value: MockType) => void }) {
+    return <span>
+        <span>{'Set For '}</span>
+        <select value={props.value || "all"} onChange={e => props.onChange?.(e.target.value as MockType)}>
+            <option value="all">All</option>
+            <option value="current">Current</option>
+        </select>
+    </span>
 }

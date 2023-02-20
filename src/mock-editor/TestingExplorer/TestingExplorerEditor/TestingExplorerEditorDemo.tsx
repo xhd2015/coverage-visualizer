@@ -43,6 +43,7 @@ export const demoAPI: API = {
             if (e.code !== 0) {
                 return { Error: e.msg } as TestingResponseV2<T>;
             }
+            // do some patch
             return e.data;
         }).catch(err => {
             return { Error: err.message } as TestingResponseV2<T>;

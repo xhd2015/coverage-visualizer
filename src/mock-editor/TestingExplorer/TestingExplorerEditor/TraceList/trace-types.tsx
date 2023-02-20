@@ -1,4 +1,6 @@
-
+export interface ExtensionData {
+    trace?: RootRecord
+}
 
 export interface RootRecord {
     startTime: string // the abolute begin time
@@ -23,6 +25,9 @@ export interface CallRecord {
 
     log?: any // log set within request
     children?: CallRecord[]
+
+    callIndex?: number
+    callTotal?: number
 }
 
 export type MockStatus = "normal_resp" | "normal_error" | "mock_resp" | "mock_error"

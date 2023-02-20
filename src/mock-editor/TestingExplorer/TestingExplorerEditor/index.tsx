@@ -3,15 +3,13 @@ import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState }
 import { useCurrent } from "../../react-hooks";
 import { objectifyData, stringifyData, stringifyDataIndent } from "../../util/format";
 import { tryParse } from "../parse";
-import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "../testing";
+import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, MockItem, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "../testing";
 import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorControl } from "./TestingEditor";
-import MockEditor, { MockEditorControl, TraceItem } from "./TestingEditor/MockEditor";
+import MockEditor, { MockEditorControl } from "./TestingEditor/MockEditor";
 import "./TestingEditor/TestingEditor.css";
-import { RootRecord } from "./TraceList/trace-types";
-
-export interface ExtensionData {
-    trace?: RootRecord
-}
+import { ExtensionData, RootRecord } from "./TraceList/trace-types";
+import { MockType, TraceItem } from "./types";
+import { changeMockTypeWithItem, getMockItem, mockEditDataToMockItem, patchResponse, setList } from "./util"
 
 // TODO: 
 // 1.make api request local
@@ -108,6 +106,13 @@ export default function (props: TestingExplorerEditorProps) {
         mockRef.current = data?.Mock
     }, [data?.Mock])
 
+    const initMockType = useMemo(() => {
+        const [mockItem, mockType] = getMockItem(data?.Mock, selItem?.item)
+        return mockType || "all"
+    }, [data?.Mock, selItem])
+    const [mockType, setMockType] = useState<MockType>(initMockType)
+    useEffect(() => setMockType(initMockType), [initMockType])
+
     const getCaseData = (): TestingCase => {
         const config = configRef.current
         return {
@@ -153,6 +158,10 @@ export default function (props: TestingExplorerEditorProps) {
     //     props.api?.loadMockInfo().then(setMockInfo)
     // }, [])
     useEffect(() => setMockInfo(props.mockInfo), [props.mockInfo])
+    useEffect(() => {
+        controlRef.current.notifyRespChanged?.()
+        // update effect
+    }, [respData])
 
     const schemaMapping = useMemo(() => buildRespJSONSchemaMapping(mockInfo), [mockInfo])
     const rootMockSchema = useMemo(() => buildJSONSchema(mockInfo), [mockInfo])
@@ -289,8 +298,9 @@ export default function (props: TestingExplorerEditorProps) {
                 }}
                 // onAllMockSave={updateAllMock}
                 mockSchema={rootMockSchema}
+
                 getMock={(item) => {
-                    const mockItem = mockRef.current?.Mapping?.[item?.item?.pkg]?.[item?.item?.func]
+                    const [mockItem] = getMockItem(mockRef.current, item?.item)
                     if (!mockItem) {
                         return undefined
                     }
@@ -302,10 +312,22 @@ export default function (props: TestingExplorerEditorProps) {
                     }
                 }}
                 checkNeedMock={(e) => {
-                    const mockItem = mockRef.current?.Mapping?.[e?.pkg]?.[e?.func]
+                    const [mockItem] = getMockItem(mockRef.current, e)
                     return !!mockItem
                 }}
-                onMockChange={(item, data) => {
+                mockType={mockType}
+                onMockTypeChange={(item, mockData, mockType, prevMockType, next) => {
+                    if (!mockRef.current) {
+                        mockRef.current = {} as MockData
+                    }
+                    changeMockTypeWithItem(mockRef.current, item?.item, mockType, mockEditDataToMockItem(mockData))
+                    next()
+                    setMockType(mockType)
+                }}
+                onMockChange={(item, data, prevData) => {
+                    if (!item?.item) {
+                        return
+                    }
                     const { pkg, func } = item?.item || {}
                     if (!pkg || !func) {
                         return
@@ -313,25 +335,16 @@ export default function (props: TestingExplorerEditorProps) {
                     if (!mockRef.current) {
                         mockRef.current = {} as MockData
                     }
-                    if (!mockRef.current.Mapping) {
-                        mockRef.current.Mapping = {}
+                    const mockItem = mockEditDataToMockItem(data)
+                    if (mockType === "all") {
+                        mockRef.current.Mapping = mockRef.current.Mapping || {}
+                        mockRef.current.Mapping[pkg] = mockRef.current.Mapping[pkg] || {}
+                        mockRef.current.Mapping[pkg][func] = mockItem
+                    } else {
+                        mockRef.current.MappingList = mockRef.current.MappingList || {}
+                        mockRef.current.MappingList[pkg] = mockRef.current.MappingList[pkg] || {}
+                        mockRef.current.MappingList[pkg][func] = setList(mockRef.current.MappingList[pkg][func] || [], item?.item.callIndex, null, mockItem)
                     }
-                    mockRef.current.Mapping[pkg] = mockRef.current.Mapping[pkg] || {}
-                    mockRef.current.Mapping[pkg][func] = data && data.mockMode !== "No Mock" ? {
-                        ...data,
-                        ...({
-                            // ignore these fields
-                            mockMode: undefined,
-                            mockErr: undefined,
-                            mockResp: undefined,
-                        } as any),
-                        Error: data.mockMode === "Mock Error" ? data.mockErr : "",
-                        // TODO: handle JSON parse error here
-                        // NOTE: why JSON.parse? because this is an inner data we have to do so
-                        // when finally request the endpoint we can use string, but here, object only
-                        Resp: data.mockMode === "Mock Error" ? "" : objectifyData(data.mockResp),
-                        RespNull: data.mockMode === "Mock Response" && data.mockResp === "null" ? true : false,
-                    } : undefined
                 }}
                 debugging={requesting}
                 disableDebug={requesting}

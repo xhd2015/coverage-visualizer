@@ -9,19 +9,22 @@ export interface TestingCase {
     AssertMockRecord: object; // deprecated
     Comment: string;
 }
+export interface MockItem {
+    Comment?: string
+    Error?: string
+    Resp?: any // Resp needs to be type-parsed against the server type
+    // examples are: string, {"Resp_0":"","Resp_1":""}
+    RespNull?: boolean
+}
+export interface MockMapping<E> {
+    [pkg: string]: {
+        [func: string]: E
+    }
+}
 
 export interface MockData {
-    Mapping: {
-        [pkg: string]: {
-            [func: string]: {
-                Comment?: string
-                Error?: string
-                Resp?: any // Resp needs to be type-parsed against the server type
-                // examples are: string, {"Resp_0":"","Resp_1":""}
-                RespNull?: boolean
-            }
-        }
-    }
+    Mapping: MockMapping<MockItem>
+    MappingList: MockMapping<MockItem[]>
 }
 
 export function getRespStatus(resp: TestingResponseV2<any>): RunStatus {

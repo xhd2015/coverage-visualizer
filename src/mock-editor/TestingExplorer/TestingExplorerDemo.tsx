@@ -10,6 +10,7 @@ import { stringifyData } from "../util/format";
 import { demoAPI } from "./TestingExplorerEditor/TestingExplorerEditorDemo";
 import { Options } from "./TestingList";
 import TestingExplorer from ".";
+import { patchResponse } from "./TestingExplorerEditor/util";
 
 const listCaseURL = 'http://localhost:16000/api/case/listAll?noCaseList=true'
 const updateSummaryURL = 'http://localhost:16000/api/summary/update'
@@ -56,6 +57,7 @@ export default function (props: TestingExplorerDemoProps) {
         if (curItem?.kind === "case") {
             caseData = await demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number)
         }
+        editorControllerRef.current?.clearResponse?.()
         setCaseData(caseData)
         action?.(caseData)
         return caseData
@@ -65,8 +67,8 @@ export default function (props: TestingExplorerDemoProps) {
         // console.log("reload case onChange:", itemBundle?.item)
         reloadItem(itemBundle?.item, itemBundle?.action)
     },
+        // destruct basic data so change won't load twice
         [itemBundle?.item?.kind, itemBundle?.item?.method, itemBundle?.item?.path, itemBundle?.item?.id]
-        // destruct basic data so change won't overkill
     )
 
     useEffect(() => {
@@ -105,7 +107,6 @@ export default function (props: TestingExplorerDemoProps) {
                     setItemBundle({
                         item,
                         action: async (caseData: TestingCase) => {
-                            editorControllerRef.current?.clearResponse?.()
                             // avoid loading items twice
                             const resp = await editorControllerRef.current?.request?.(caseData)
                             const status = getRespStatus(resp)
@@ -266,7 +267,7 @@ export default function (props: TestingExplorerDemoProps) {
                     const data: TestingResponseV2<ExtensionData> = await demoAPI.requestTest({ ...req, method: curItem.method }).catch(e => {
                         return { Error: e.message } as TestingResponseV2<ExtensionData>
                     }) as TestingResponseV2<ExtensionData>
-                    return data
+                    return patchResponse(data)
                 },
             }}
         />

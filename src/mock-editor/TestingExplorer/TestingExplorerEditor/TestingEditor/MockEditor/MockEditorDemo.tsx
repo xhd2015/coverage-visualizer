@@ -1,9 +1,9 @@
 import { useMemo, useRef } from "react";
-import MockEditor, { MockData } from ".";
+import MockEditor, { MockEditData } from ".";
 import callRecord from "../../../testdata.json";
 
 export default function () {
-    const simpleMockMap = useRef<{ [key: string]: MockData }>({})
+    const simpleMockMap = useRef<{ [key: string]: MockEditData }>({})
     return <MockEditor
         style={{
             marginLeft: "400px",
