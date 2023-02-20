@@ -8,16 +8,16 @@ import { MdContentCopy } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
 import { VscPlay } from "react-icons/vsc"
 
-import { filter, throttle } from "lodash"
 import ExpandList, { ExpandItem, ItemController, useExpandListController, useSelect } from "../../ExpandList"
 import { ItemIndex, ItemPath } from "../../List"
 import { useCurrent } from "../../react-hooks"
 import ToolBar from "../../support/ToolBar"
-import { map, traverse } from "../../tree"
+import { filter, map, traverse } from "../../tree"
 import { allStatus, RunStatus } from "../testing"
 import { TestingItem } from "../testing-api"
 import "./TestingList.css"
 import Checkbox from "../../support/Checkbox"
+import { throttle } from "../../util/throttle"
 
 type StateCounters = Record<RunStatus, number>
 
@@ -171,6 +171,7 @@ export default function (props: TestingListProps) {
     }, [items])
 
     const runItem = async (item: TestingStatItem, path: ItemPath, notifyUpdate: () => void) => {
+        console.log("DEBUG runItem:", path.join("/"), item)
         if (item.status === "running") {
             // disable when already running
             return// running by other, so here skip
@@ -293,15 +294,15 @@ export default function (props: TestingListProps) {
                 onClickRun={() => {
                     const runAction = () => {
                         const isRoot = controller.path?.length <= 1
-                        let needCall = isRoot
-                        // console.log("run:", controller.path, isRoot)
+                        let needSave = isRoot
+                        console.log("DEBUG run:", controller.path, isRoot)
                         // if (true) {
                         //     return
                         // }
                         runItem(item, controller.path, () => {
                             // get the update-to-date item
                             const item = controller.item
-                            if (!needCall) {
+                            if (!needSave) {
                                 return
                             }
                             if (!isRoot) {
@@ -315,7 +316,7 @@ export default function (props: TestingListProps) {
                             if (item.status === 'running' || item.status === 'not_run') {
                                 return
                             }
-                            needCall = false
+                            needSave = false
                             props.onAllRan?.(item.counters as StateCounters)
                         })
                     }

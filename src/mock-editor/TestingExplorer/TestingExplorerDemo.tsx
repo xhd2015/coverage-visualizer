@@ -205,25 +205,25 @@ export default function (props: TestingExplorerDemoProps) {
                         })
                     },
                     async run(item, path) {
-                        let usedCaseData: TestingCase
+                        let actualCaseData: TestingCase
                         if (item.method === curItem?.method && item.id === curItem?.id && item.name === curItem?.name && caseData) {
-                            usedCaseData = caseData
+                            actualCaseData = caseData
                         } else {
-                            usedCaseData = await demoAPI.loadCase(item.method as string, item.path as string, item.id as number)
+                            actualCaseData = await demoAPI.loadCase(item.method as string, item.path as string, item.id as number)
                         }
-                        if (!usedCaseData) {
+                        if (!actualCaseData) {
                             return "not_run"
                         }
-                        if (usedCaseData.Skip) {
+                        if (actualCaseData.Skip) {
                             return "skip"
                         }
                         const resp = await demoAPI.requestTest({
                             method: item.method,
-                            request: stringifyData(usedCaseData?.Request),
-                            assertIsErr: !!usedCaseData?.AssertError,
-                            assertError: usedCaseData?.AssertError,
-                            asserts: stringifyData(usedCaseData?.Asserts),
-                            mock: stringifyData(usedCaseData.Mock), // serialize so that resp have correct type instead of raw string
+                            request: stringifyData(actualCaseData?.Request),
+                            assertIsErr: !!actualCaseData?.AssertError,
+                            assertError: actualCaseData?.AssertError,
+                            asserts: stringifyData(actualCaseData?.Asserts),
+                            mock: stringifyData(actualCaseData.Mock), // serialize so that resp have correct type instead of raw string
                         } as TestingRequestV2)
                         return getRespStatus(resp)
                     },
