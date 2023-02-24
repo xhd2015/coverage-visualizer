@@ -1,7 +1,7 @@
 import ToolBar from "../mock-editor/support/ToolBar";
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import ExpandList, { ExpandItem, useSelect } from "../mock-editor/ExpandList";
-import LayoutLeftRight from "../mock-editor/support/LayoutLeftRight";
+import LayoutLeftRight, { LayoutLeftRightProps } from "../mock-editor/support/LayoutLeftRight";
 import { DiffCodeViewerListTitledDemo, Item } from "./DiffCodeViewerListDemo";
 import ViewerList from "./ViewerList";
 import { go } from "./lang";
@@ -11,7 +11,7 @@ import VirtualList, { VirtualListController } from "../mock-editor/support/Virtu
 import { traverse } from "../mock-editor/tree";
 import { useCurrent } from "../mock-editor/react-hooks";
 import { FileCoverage } from "../support/components/CoverageVisualizer";
-import ColResizeBar from "../support/components/v2/ColResizeBar";
+import ColResizeBar, { ColResizeBarProps } from "../support/components/v2/ColResizeBar";
 
 export interface File extends ExpandItem {
     key: string
@@ -35,6 +35,10 @@ export interface CodeViewerListProps {
     codeContainerClassName?: string
 
     renderFileCode?: (file: string) => any
+
+    layoutProps?: LayoutLeftRightProps
+    resizeBarProps?: ColResizeBarProps
+    getResizeParent?: (e: HTMLElement) => HTMLElement
 }
 
 export default function (props: CodeViewerListProps) {
@@ -79,11 +83,13 @@ export default function (props: CodeViewerListProps) {
     const toggleExpandRef = useRef<() => void>()
 
     return <LayoutLeftRight
+        {...props.layoutProps}
         rootStyle={props.style}
         leftStyle={{
             position: "relative",
             userSelect: "none",
             ...props.listStyle,
+            ...props.layoutProps?.leftStyle,
         }}
         leftClassName={props.listClassName}
         leftChild={<div>
@@ -107,11 +113,17 @@ export default function (props: CodeViewerListProps) {
                 <ColResizeBar
                     barColor="#dddd85" // yellow like
                     getTargetElement={e => {
-                        return e.parentElement.parentElement.parentElement as HTMLElement
-                    }} />
+                        return props.getResizeParent ? props.getResizeParent(e) : e.parentElement.parentElement.parentElement as HTMLElement
+                    }}
+                    {...props.resizeBarProps}
+                />
             </div>
         </div>
         }
+        rightStyle={{
+            // flexGrow: undefined
+            ...props.layoutProps?.rightStyle,
+        }}
         rightChild={
             <div style={{
                 height: "100%",

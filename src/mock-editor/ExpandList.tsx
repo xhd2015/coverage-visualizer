@@ -422,6 +422,7 @@ export interface SelectBundle<T extends ExpandItem & { children?: T[] }> {
     setSelectedController: React.Dispatch<React.SetStateAction<ItemControllerExt<T>>>
 
     getSelectAction: (item: T, controller: ItemController<T>) => (() => Promise<void>)
+    setSelect: (controller: ItemController<T>) => Promise<void>
 }
 
 export function useSelect<T extends ExpandItem & { children?: T[] }>(props: SelectProps<T>): SelectBundle<T> {
@@ -429,32 +430,45 @@ export function useSelect<T extends ExpandItem & { children?: T[] }>(props: Sele
 
     const selectedControllerRef = useCurrent(selectedController)
     const onSelectChangeRef = useCurrent(props.onSelectChange)
-    const getSelectAction = useCallback((item: T, controller: ItemController<T>) => {
-        const selectedController = selectedControllerRef.current
-        if (selectedController?.id === controller.id) {
+
+    const updateController = async (previous: ItemControllerExt<T>, controller: ItemController<T>) => {
+        if (previous?.id === controller?.id) {
             return
         }
-        const action = async () => {
-            // const begin = new Date().getTime()
-            // console.log("DEBUG action begin")
-            // clear prev
-            if (selectedController) {
-                selectedController.removeAttachedListener?.()
-                selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
-            }
 
-            const removeAttachedListener = controller.subscribeUpdate((item) => {
-                onSelectChangeRef.current?.(item, controller.root, controller.index)
-            })
-
-            setSelectedController({ ...controller, removeAttachedListener: removeAttachedListener })
-            controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
-            onSelectChangeRef.current?.(item, controller.root, controller.index)
-            // const end = new Date().getTime()
-            // console.log("DEBUG action end:", end - begin)
+        // const begin = new Date().getTime()
+        // console.log("DEBUG action begin")
+        // clear prev
+        if (previous) {
+            previous.removeAttachedListener?.()
+            previous.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
         }
-        return action
+        if (!controller) {
+            setSelectedController(undefined)
+            onSelectChangeRef.current?.(undefined, undefined, undefined)
+            return
+        }
+
+        const removeAttachedListener = controller.subscribeUpdate((item) => {
+            onSelectChangeRef.current?.(item, controller.root, controller.index)
+        })
+
+        setSelectedController({ ...controller, removeAttachedListener: removeAttachedListener })
+        controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
+        onSelectChangeRef.current?.(controller.item, controller.root, controller.index)
+        // const end = new Date().getTime()
+        // console.log("DEBUG action end:", end - begin)
+    }
+
+    const setSelect = async (controller: ItemController<T>) => {
+        updateController(selectedControllerRef.current, controller)
+    }
+
+    const getSelectAction = useCallback((item: T, controller: ItemController<T>) => {
+        return async () => updateController(selectedControllerRef.current, controller)
     }, [])
 
-    return { selectedController, setSelectedController, getSelectAction }
+
+
+    return { selectedController, setSelectedController, getSelectAction, setSelect }
 }

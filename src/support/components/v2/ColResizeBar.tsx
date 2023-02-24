@@ -1,102 +1,183 @@
-import { useEffect, useRef } from "react"
-
+import { MutableRefObject, useEffect, useRef } from "react"
 
 const defaultBarColor = "#0000ff" // blue
 export interface ColResizeBarProps {
     barColor?: string // defa
 
+    vertical?: boolean
+
     getTargetElement?: (bar: HTMLElement) => HTMLElement
+
+    autoResize?: boolean // default true
+    onPositionBegin?: (bar: HTMLElement, start: number) => void
+    onPositionChange?: (bar: HTMLElement, to: number, from: number) => void
 }
 
 // expect parent to have: position:relative
 export default function ColResizeBar(props: ColResizeBarProps) {
     const divRef = useRef<HTMLDivElement>()
+    const propsRef = useRef(props)
     useEffect(() => {
         // console.log("attaching resize handler")
-        const detach = attachResizeHandlers(divRef.current, props)
+        const detach = attachResizeHandlers(divRef.current, propsRef)
         return detach
     }, [])
     return <div style={{
         // backgroundColor: "red",
-        width: "5px",
-        cursor: 'col-resize',
         position: "absolute",
-        top: 0,
-        right: 0,
-        height: "100%"
+        ...(props.vertical ? {
+            cursor: 'row-resize',
+            height: "5px",
+            bottom: 0,
+            left: 0,
+            width: "100%"
+        } : {
+            cursor: 'col-resize',
+            width: "5px",
+            top: 0,
+            right: 0,
+            height: "100%"
+        })
     }}
         ref={divRef}
     ></div>
 }
 
-export function attachResizeHandlers(div: HTMLDivElement, props: ColResizeBarProps) {
-    let pageX: number
-    let targetElementWidth: number;
+
+interface Handler {
+    getPos: (e: MouseEvent) => number
+    getSize: (e: HTMLElement) => number
+    getPadding: (e: HTMLElement) => number
+    setSize: (e: HTMLElement, size: number) => void
+}
+
+const verticalHandler: Handler = {
+    getPos(e) {
+        return e.pageY
+    },
+    getSize(e) {
+        return e.offsetHeight
+    },
+    getPadding(e) {
+        return paddingYDiff(e)
+    },
+    setSize(e, size) {
+        e.style.height = `${size}px`
+    },
+}
+
+const horizontalHandler: Handler = {
+    getPos(e) {
+        return e.pageX
+    },
+    getSize(e) {
+        return e.offsetWidth
+    },
+    getPadding(e) {
+        return paddingDiff(e)
+    },
+    setSize(e, size) {
+        e.style.width = `${size}px`
+    },
+}
+
+export function attachResizeHandlers(resizeBar: HTMLDivElement, propsRef: MutableRefObject<ColResizeBarProps>) {
+    let pagePos: number
+    let targetElementSize: number;
     let targetElement: HTMLElement;
+    let watching
+
+
+    const handler: Handler = propsRef.current.vertical ? verticalHandler : horizontalHandler
+
+    const autoResize = () => propsRef.current?.autoResize !== false
 
     const onmousedown = function (e) {
-        // console.log("mousedown:", e)
+        // console.log("mousedown:", e, e.pageX)
         // curCol = e.target.parentElement;
-        targetElement = props?.getTargetElement ? props?.getTargetElement(e.target as HTMLElement) : (e.target as HTMLElement).parentElement.parentElement
-        if (!targetElement) {
-            return
-        }
-        pageX = e.pageX;
+        watching = true
+        pagePos = handler.getPos(e)
+        propsRef.current?.onPositionBegin?.(e.target, pagePos)
+        if (autoResize()) {
+            targetElement = propsRef.current?.getTargetElement ? propsRef.current?.getTargetElement(e.target as HTMLElement) : (e.target as HTMLElement).parentElement.parentElement
+            if (!targetElement) {
+                return
+            }
 
-        var padding = paddingDiff(targetElement);
-        targetElementWidth = targetElement.offsetWidth - padding;
+            const padding = handler.getPadding(targetElement)
+            // inner width(without padding) = offsetWidth - padding
+            targetElementSize = handler.getSize(targetElement) - padding
+        }
     }
     const onmouseover = function (e) {
-        e.target.style.borderRight = `2px solid ${props?.barColor || defaultBarColor}`;
+        e.target.style.borderRight = `2px solid ${propsRef.current?.barColor || defaultBarColor}`;
     }
     const onmouseout = function (e) {
         e.target.style.borderRight = '';
     }
     const onmousemove = function (e) {
-        // console.log("mousemove:", e)
-        if (targetElement) {
-            var diffX = e.pageX - pageX;
+        if (!watching) {
+            return
+        }
+        // console.log("mousemove:", e, e.pageX)
+        propsRef.current?.onPositionChange?.(e.target, handler.getPos(e), pagePos)
+
+        if (autoResize() && targetElement) {
+            const diff = handler.getPos(e) - pagePos
 
             // const padding = paddingDiff(monacoContainer);
             // const monacoContainerWidth = monacoContainer.offsetWidth - padding;
-            const newWidth = (targetElementWidth + diffX) + 'px';
+            const newSize = targetElementSize + diff
             // console.log("moving:", monacoContainer, diffX, newWidth)
-            targetElement.style.width = (targetElementWidth + diffX) + 'px';
+            if (propsRef.current?.autoResize !== false) {
+                handler.setSize(targetElement, newSize)
+            }
         }
     }
     const onmouseup = function (e) {
+        if (!watching) {
+            return
+        }
+        watching = false
         targetElement = undefined;
-        pageX = undefined;
-        targetElementWidth = undefined
+        pagePos = undefined;
+        targetElementSize = undefined
     }
 
-    div.addEventListener('mousedown', onmousedown);
-    div.addEventListener('mouseover', onmouseover)
-    div.addEventListener('mouseout', onmouseout)
+    resizeBar.addEventListener('mousedown', onmousedown);
+    resizeBar.addEventListener('mouseover', onmouseover)
+    resizeBar.addEventListener('mouseout', onmouseout)
     document.addEventListener('mousemove', onmousemove);
     document.addEventListener('mouseup', onmouseup);
 
     return () => {
         // console.log("detaching resize handler")
-        div.removeEventListener('mousedown', onmousedown)
-        div.removeEventListener('mouseover', onmouseover)
-        div.removeEventListener('mouseout', onmouseout)
+        resizeBar.removeEventListener('mousedown', onmousedown)
+        resizeBar.removeEventListener('mouseover', onmouseover)
+        resizeBar.removeEventListener('mouseout', onmouseout)
         document.removeEventListener('mousemove', onmousemove);
         document.removeEventListener('mouseup', onmouseup);
     }
 }
-function paddingDiff(col) {
-
-    if (getStyleVal(col, 'box-sizing') == 'border-box') {
+export function paddingDiff(e: HTMLElement) {
+    if (getCSSVal(e, 'box-sizing') == 'border-box') {
         return 0;
     }
 
-    var padLeft = getStyleVal(col, 'padding-left');
-    var padRight = getStyleVal(col, 'padding-right');
+    var padLeft = getCSSVal(e, 'padding-left');
+    var padRight = getCSSVal(e, 'padding-right');
     return (parseInt(padLeft) + parseInt(padRight));
+}
+export function paddingYDiff(e: HTMLElement) {
+    if (getCSSVal(e, 'box-sizing') == 'border-box') {
+        return 0;
+    }
 
+    var padTop = getCSSVal(e, 'padding-top');
+    var padBottom = getCSSVal(e, 'padding-bottom');
+    return (parseInt(padTop) + parseInt(padBottom));
 }
 
-function getStyleVal(elm, css) {
-    return (window.getComputedStyle(elm, null).getPropertyValue(css))
+function getCSSVal(elm: HTMLElement, property: string) {
+    return (window.getComputedStyle(elm, null).getPropertyValue(property))
 }
