@@ -102,6 +102,6 @@ export function mockEditDataToMockItem(data: MockEditData): MockItem {
         // NOTE: why JSON.parse? because this is an inner data we have to do so
         // when finally request the endpoint we can use string, but here, object only
         Resp: data.mockMode === "Mock Error" ? "" : objectifyData(data.mockResp),
-        RespNull: data.mockMode === "Mock Response" && data.mockResp === "null" ? true : false,
+        RespNull: data.mockMode === "Mock Response" && data.mockResp === "null" ? true : undefined,
     } : undefined
 }

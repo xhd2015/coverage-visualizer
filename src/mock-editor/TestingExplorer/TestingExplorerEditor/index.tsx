@@ -188,7 +188,7 @@ export default function (props: TestingExplorerEditorProps) {
     })
 
     const updateMockJSON = useMemo(() => {
-        // TODO: use debounce
+        // debounce update json
         return debounce((allMock: string) => {
             setAllMock(allMock)
             updateHandler.current(allMock)

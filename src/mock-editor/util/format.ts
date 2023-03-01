@@ -1,6 +1,6 @@
 
 export function stringifyData(r: any, indent?: boolean): string {
-    if (!r) {
+    if (r === undefined) {
         return ""
     }
     if (typeof r === 'string') {
