@@ -167,6 +167,7 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
 
             // calcaulte previous items
             if (typeof lastScrollTop === 'number' && savedScrollTop <= lastScrollTop) {
+                // scroll up
                 // console.log("DEBUG scroll up:", firstChildIndex, lastChildIndex)
                 // if (savedScrollTop === lastScrollTop) {
                 //     return
@@ -208,12 +209,15 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
                 }
                 return
             }
+
+            // scroll down
             // console.log("DEBUG scroll down:", firstChildIndex, lastChildIndex)
 
             // load N from firstChildIndex
             // there are 'firstChildIndex' element ahead, 
             // so the trailing need to load these more items as
             // complement
+            console.log("render:", loadedNum, firstChildIndex, maxRendering)
             const newNum = firstChildIndex
             if (loadedNum - newNum >= maxRendering) { // already satisfied
                 // console.log("loaded num satisfied:", loadedNum, newNum, maxRendering)

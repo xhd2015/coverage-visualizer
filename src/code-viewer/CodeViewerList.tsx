@@ -92,7 +92,7 @@ export default function (props: CodeViewerListProps) {
             ...props.layoutProps?.leftStyle,
         }}
         leftClassName={props.listClassName}
-        leftChild={<div>
+        leftChild={<div style={{ "position": "relative" }}>
             <div>
                 <ToolBar onToggleExpand={() => toggleExpandRef.current?.()} />
                 <ExpandList<File>
