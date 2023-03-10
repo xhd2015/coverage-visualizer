@@ -128,6 +128,7 @@ export default function (props: CodeViewerListProps) {
             <div style={{
                 height: "100%",
                 overflowY: "scroll",
+                fontSize: "14px",
                 // overflow: "auto"
             }}>
                 {/* placeholder */}
