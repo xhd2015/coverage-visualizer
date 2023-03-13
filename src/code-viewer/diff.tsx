@@ -26,6 +26,9 @@ export function diffLines(oldLines: string[], newLines: string[], opts?: { baseP
     const lines: BlockLine[] = []
     const changes = diff(oldLines, newLines)
     forEachLineMapping(changes, oldLines?.length, newLines?.length, (oldLineStart: number, oldLineEnd: number, newLineStart: number, newLineEnd: number, changeType: ChangeType) => {
+
+        // console.log("DEBUG change:", oldLineStart, oldLineEnd, newLineStart, newLineEnd, changeType)
+
         // debugger
         const oldLen = oldLineEnd - oldLineStart
         const newLen = newLineEnd - newLineStart
@@ -37,14 +40,14 @@ export function diffLines(oldLines: string[], newLines: string[], opts?: { baseP
                 index: lines.length,
                 changeType: changeType,
                 oldLine: changeType === ChangeType.Insert ? undefined : {
-                    value: oldLines[oldLineStart + i - 1],
+                    value: i >= oldLen ? undefined : oldLines[oldLineStart + i - 1],
                     lineNumber: oldLineStart + i,
                     hideNumber: i >= oldLen,
                     className: changeType !== ChangeType.Unchange && i < oldLen ? lineDelete : "",
                     ...opts?.baseProps,
                 },
                 newLine: changeType === ChangeType.Delete ? undefined : {
-                    value: newLines[newLineStart + i - 1],
+                    value: i >= newLen ? undefined : newLines[newLineStart + i - 1],
                     lineNumber: newLineStart + i,
                     hideNumber: i >= newLen,
                     className: changeType !== ChangeType.Unchange && i < newLen ? lineNew : "",

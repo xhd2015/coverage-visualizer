@@ -35,7 +35,7 @@ export default function DiffCodeViewer(props: DiffCodeViewerProps) {
 }
 
 export interface BlockLine {
-    index: number // the index can be used as a key
+    index: number // index in the original line list, the index can be used as a key, 0-based
     changeType: ChangeType
     oldLine?: LineProps
     newLine?: LineProps
@@ -67,7 +67,8 @@ export function RenderBlockLine(props: BlockLineWithListenersProps) {
                 <LinkButton icon={<BsArrowBarUp />} onClick={props.onClickExpandDown} />
             </div> : <>
                 {!props.hideOldCode &&
-                    <Line hideNumber={props.line?.oldLine === undefined}
+                    <Line
+                        hideNumber={props.line?.oldLine === undefined}
                         {...props.line?.oldLine}
                         style={{
                             //  flexGrow: 1,

@@ -461,7 +461,7 @@ export function applyDecoration(editor: monaco.editor.IStandaloneCodeEditor, fil
     fileOpts.decorationsRes = editor.createDecorationsCollection(fileOpts.decorations);
 }
 export async function getEditorModel(file: string, fileModels: { [file: string]: FileOptions }, fileDetailGetter: FileDetailGetter, contentDecorator: ContentDecorator, uriPrefix: string): Promise<FileOptions | null> {
-    console.log("getEditorModel file:", file)
+    // console.log("getEditorModel file:", file)
 
     if (!file) {
         // no active file selected, clear content

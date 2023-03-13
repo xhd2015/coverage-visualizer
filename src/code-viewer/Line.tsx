@@ -18,13 +18,21 @@ export interface LineProps {
 
     lineNumberClassName?: string
     contentClassName?: string
+
+    // element
+    trailingElement?: any
+    trailingElementInsideLine?: any
 }
 
 const greyColor = "#AFAFAF"
 
 export function Line(props: LineProps) {
     return <div
-        style={{ display: "flex", alignItems: "baseline", ...props.style }}
+        style={{
+            display: "flex",
+            // alignItems: "baseline", 
+            ...props.style
+        }}
         className={`code-viewer-line ${props.className ?? ""}`}
     >
         <div style={{
@@ -34,7 +42,9 @@ export function Line(props: LineProps) {
         }}
             className={`code-viewer-line-number ${props.lineNumberClassName ?? ""}`}
         >
-            {!props.hideNumber && <span>{props.lineNumber}</span>}
+            {!props.hideNumber &&
+                <span>{props.lineNumber}</span>
+            }
         </div>
         <LineContent
             value={props.value}
@@ -46,7 +56,11 @@ export function Line(props: LineProps) {
             style={{
                 // paddingLeft: "20px"
             }}
+            trailingElement={props.trailingElementInsideLine}
         />
+        {
+            props.trailingElement
+        }
     </div>
 }
 
@@ -56,6 +70,7 @@ export interface LineContentProps {
     language?: string
     className?: string
     style?: CSSProperties
+    trailingElement?: any
 }
 export function LineContent(props: LineContentProps) {
     const hightHtml = useMemo(() => props.grammar && props.language && Prism.highlight(props.value ?? "", props.grammar, props.language), [props.value, props.grammar, props.language])
@@ -65,11 +80,11 @@ export function LineContent(props: LineContentProps) {
         className={props.className}
         style={{
             ...props.style
-        }}><code><div
+        }}><code><span
             dangerouslySetInnerHTML={{
                 __html: hightHtml,
             }}
-        ></div></code></pre>
+        ></span></code>{props.trailingElement}</pre>
 }
 
 /**

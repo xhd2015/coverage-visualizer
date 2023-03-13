@@ -174,7 +174,7 @@ termInfo.TotalAmount = monthMonies[i].Display_repay_amount.String()
 `
 
 export function DiffCodeViewCodeSnippetDemo() {
-    const lines = diffCode(
+    let lines = diffCode(
         oldCode,
         newCode,
         {
@@ -184,14 +184,16 @@ export function DiffCodeViewCodeSnippetDemo() {
             }
         }
     )
-    console.log("lines:", lines)
+    // lines = lines.slice(10, 11)
+    // console.log("lines:", lines)
     const compLines = compactLines(lines)
-    console.log("compact lines:", compLines)
+    // console.log("compact lines:", compLines)
     return <DiffCodeViewer
         style={{
-            width: "60%",
+            width: "80%",
             marginLeft: "auto",
-            marginRight: "auto"
+            marginRight: "auto",
+            fontSize: "90%"
         }}
         lines={compLines}
     />
