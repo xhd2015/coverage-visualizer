@@ -89,7 +89,8 @@ export function RenderBlockLine(props: BlockLineWithListenersProps) {
 }
 
 function LinkButton(props: { icon?: any, style?: CSSProperties, onClick?: any }) {
-    return <a href="javascript:void(0)"
+    return <a
+        href={undefined}
         style={{
             "textDecoration": "none",
             fontSize: "0.875rem",

@@ -3,7 +3,7 @@
 
 // oldLines are empty => creation
 
-import { ChangeType, diff, forEachLineMapping } from "./diff-vscode"
+import { ChangeType, diff, forEachLineMapping, LineChange } from "./diff-vscode"
 import { BlockLine, BlockLineProps } from "./DiffCodeViewer"
 import { LineProps } from "./Line"
 import { lineDelete, lineNew } from "./styles"
@@ -17,14 +17,19 @@ export interface DiffBlock {
 
     unmodified?: boolean // the two blocks only for view,no diff
 }
+export interface DiffOptions {
+    baseProps?: Partial<LineProps>
+    diffLines?: (oldLines: string[], newLines: string[]) => (LineChange[] | Promise<LineChange[]>)
+}
 
-export function diffCode(oldCode: string, newCode: string, opts?: { baseProps: Partial<LineProps> }): BlockLine[] {
+export function diffCode(oldCode: string, newCode: string, opts?: DiffOptions): Promise<BlockLine[]> {
     return diffLines(oldCode?.split?.("\n"), newCode?.split?.("\n"), opts)
 }
 
-export function diffLines(oldLines: string[], newLines: string[], opts?: { baseProps: Partial<LineProps> }): BlockLine[] {
+export async function diffLines(oldLines: string[], newLines: string[], opts?: DiffOptions): Promise<BlockLine[]> {
     const lines: BlockLine[] = []
-    const changes = diff(oldLines, newLines)
+    const diffFn = opts?.diffLines || diff
+    const changes = await diffFn(oldLines, newLines)
     forEachLineMapping(changes, oldLines?.length, newLines?.length, (oldLineStart: number, oldLineEnd: number, newLineStart: number, newLineEnd: number, changeType: ChangeType) => {
 
         // console.log("DEBUG change:", oldLineStart, oldLineEnd, newLineStart, newLineEnd, changeType)
