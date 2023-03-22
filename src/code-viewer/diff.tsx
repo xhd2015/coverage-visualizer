@@ -30,6 +30,10 @@ export async function diffLines(oldLines: string[], newLines: string[], opts?: D
     const lines: BlockLine[] = []
     const diffFn = opts?.diffLines || diff
     const changes = await diffFn(oldLines, newLines)
+
+    // the algorithm is not perfect here:
+    // for changed blocks A->B, we are just marking there common part changed, and
+    // the remaining parts are dropped
     forEachLineMapping(changes, oldLines?.length, newLines?.length, (oldLineStart: number, oldLineEnd: number, newLineStart: number, newLineEnd: number, changeType: ChangeType) => {
 
         // console.log("DEBUG change:", oldLineStart, oldLineEnd, newLineStart, newLineEnd, changeType)
@@ -44,15 +48,15 @@ export async function diffLines(oldLines: string[], newLines: string[], opts?: D
             lines.push({
                 index: lines.length,
                 changeType: changeType,
-                oldLine: changeType === ChangeType.Insert ? undefined : {
-                    value: i >= oldLen ? undefined : oldLines[oldLineStart + i - 1],
+                oldLine: (changeType === ChangeType.Insert || i >= oldLen) ? undefined : {
+                    value: oldLines[oldLineStart + i - 1],
                     lineNumber: oldLineStart + i,
                     hideNumber: i >= oldLen,
                     className: changeType !== ChangeType.Unchange && i < oldLen ? lineDelete : "",
                     ...opts?.baseProps,
                 },
-                newLine: changeType === ChangeType.Delete ? undefined : {
-                    value: i >= newLen ? undefined : newLines[newLineStart + i - 1],
+                newLine: (changeType === ChangeType.Delete || i >= newLen) ? undefined : {
+                    value: newLines[newLineStart + i - 1],
                     lineNumber: newLineStart + i,
                     hideNumber: i >= newLen,
                     className: changeType !== ChangeType.Unchange && i < newLen ? lineNew : "",
