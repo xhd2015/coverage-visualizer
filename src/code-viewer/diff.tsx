@@ -34,7 +34,7 @@ export async function diffLines(oldLines: string[], newLines: string[], opts?: D
     // the algorithm is not perfect here:
     // for changed blocks A->B, we are just marking there common part changed, and
     // the remaining parts are dropped
-    forEachLineMapping(changes, oldLines?.length, newLines?.length, (oldLineStart: number, oldLineEnd: number, newLineStart: number, newLineEnd: number, changeType: ChangeType) => {
+    forEachLineMapping(changes, oldLines?.length || 0, newLines?.length || 0, (oldLineStart: number, oldLineEnd: number, newLineStart: number, newLineEnd: number, changeType: ChangeType) => {
 
         // console.log("DEBUG change:", oldLineStart, oldLineEnd, newLineStart, newLineEnd, changeType)
 
