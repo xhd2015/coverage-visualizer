@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@fultonjs/common": "github:xhd2015/fultonjs#master",
     "express": "^4.18.1",
     "monaco-editor": "^0.34.0",
     "monaco-editor-webpack-plugin": "^7.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-icons": "^4.9.0",
     "react-monaco-editor": "^0.49.0"
   },
   "scripts": {
