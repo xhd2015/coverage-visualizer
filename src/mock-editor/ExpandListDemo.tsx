@@ -5,6 +5,10 @@ import ExpandList, { ExpandItem } from "./ExpandList"
 import { useCurrent } from "./react-hooks"
 import { filter, traverse } from "./tree"
 
+// show list with:
+//    filtering
+//    expand
+
 export interface DemoItem extends ExpandItem {
     name?: string
     children?: DemoItem[]

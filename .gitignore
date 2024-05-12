@@ -7,3 +7,4 @@ node_modules
 gitlab-ui
 
 /src/demo.js
+/src/demo.html

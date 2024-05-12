@@ -15,7 +15,7 @@ import { output, run as runCmd } from "./shell"
 
 const args = process.argv.slice(2)
 
-async function patchJSX(file: string, watch: boolean, jsxPatch: boolean | undefined) {
+async function patchJSX(file: string, watch: boolean, jsxPatch: boolean | undefined, genHTML: boolean) {
     // console.log("file:", file)
     let matchSuffix = ""
     let needPatchJSX = false
@@ -37,11 +37,18 @@ async function patchJSX(file: string, watch: boolean, jsxPatch: boolean | undefi
     }
 
     const nameNoSuffix = file.slice(0, file.length - matchSuffix.length)
-
     const targetFile = nameNoSuffix + ".js"
 
+    let packHTMLOptions: HTMLOptions
+    if (genHTML) {
+        packHTMLOptions = {}
+        if (await fs.exists(nameNoSuffix + ".css")) {
+            packHTMLOptions.style = await fs.readFile(nameNoSuffix + ".css", { encoding: 'utf-8' })
+        }
+    }
+
     // build for the first time
-    await buildFile(file, targetFile, needPatchJSX)
+    await buildFile(file, targetFile, needPatchJSX, nameNoSuffix + ".html", packHTMLOptions)
     if (!watch) {
         return
     }
@@ -57,14 +64,11 @@ async function patchJSX(file: string, watch: boolean, jsxPatch: boolean | undefi
     for await (const event of watcher) {
         console.log(`rebuilding ${file}...`)
         let data = await fs.readFile(tmpBuiltFile, { encoding: 'utf-8' })
-        if (needPatchJSX) {
-            data = patch(targetFile, data)
-        }
-        await fs.writeFile(targetFile, data)
+        await patchGen(data, targetFile, needPatchJSX, nameNoSuffix + ".html", packHTMLOptions)
     }
 }
 
-async function buildFile(srcFile: string, targetFile: string, patchJSX: boolean) {
+async function buildFile(srcFile: string, targetFile: string, patchJSX: boolean, htmlFile: string, htmlOptions: HTMLOptions | undefined) {
     let data = await output("bun", getBuildCommand(srcFile, false, "", patchJSX))
     // buggy
     // const buildCmd = await $`bun build --target browser --external react/jsx-dev-runtime ${file}`
@@ -72,10 +76,21 @@ async function buildFile(srcFile: string, targetFile: string, patchJSX: boolean)
     // const data = buildCmd.text()
 
     // console.log("data:", data)
+    await patchGen(data, targetFile, patchJSX, htmlFile, htmlOptions)
+}
+
+async function patchGen(data: string, targetFile: string, patchJSX: boolean, htmlFile: string, htmlOptions: HTMLOptions | undefined) {
     if (patchJSX) {
         data = patch(targetFile, data)
     }
     await fs.writeFile(targetFile, data)
+
+    if (htmlOptions != null) {
+        await fs.writeFile(htmlFile, packHTML({
+            ...htmlOptions,
+            script: await fs.readFile(targetFile, { encoding: 'utf-8' }),
+        }))
+    }
 }
 
 function getBuildCommand(file: string, watch: boolean, targetFile: string, patchJSX: boolean): string[] {
@@ -99,13 +114,47 @@ function patch(targetFile: string, content: string): string {
     if (!relPath.startsWith(".")) {
         relPath = "./" + relPath
     }
-    console.log("relPath:", relPath, jsxPath, targetFile)
+    // console.log("relPath:", relPath, jsxPath, targetFile)
     return content.replaceAll('from "react/jsx-dev-runtime"', `from "${relPath}"`)
+}
+
+interface HTMLOptions {
+    title?: string
+    script?: string
+    style?: string
+}
+
+function packHTML(opts?: HTMLOptions) {
+    //  type="module" is required
+    return `<!DOCTYPE html>
+    <html lang="en" style="height: 100%;">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${opts?.title || "Demo"}</title>
+        <style>
+        ${opts?.style || ""} 
+        </style>
+        <script type="module">
+        ${safeScript(opts?.script || "")}
+        </script>
+    </head>
+    <body style="height: 100%;">
+        <div id="root" style="height: 100%;"></div>
+    </body>
+    </html>
+`
+}
+
+// script may contain: "<script></script>", which needs to be transformed to "<script><"+"/script>"
+function safeScript(script: string): string {
+    return script.replaceAll(`"<script></script>"`, `"<script><"+"/script>"`)
 }
 
 async function run() {
     let watch = false
     let jsxPatch = false
+    let genHTML = false
     const n = args.length
     const remainArgs = []
     for (let i = 0; i < n; i++) {
@@ -120,6 +169,10 @@ async function run() {
         }
         if (arg === "--no-jsx-patch") {
             jsxPatch = false
+            continue
+        }
+        if (arg == "--gen-html") {
+            genHTML = true
             continue
         }
         if (!arg.startsWith("-")) {
@@ -138,7 +191,7 @@ async function run() {
 
     const actions: Promise<void>[] = []
     for (let file of files) {
-        const action = patchJSX(file, watch, jsxPatch)
+        const action = patchJSX(file, watch, jsxPatch, genHTML)
         actions.push(action)
     }
     await Promise.all(actions)
