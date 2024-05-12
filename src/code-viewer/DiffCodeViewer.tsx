@@ -74,7 +74,7 @@ export interface CodeSelection {
 
 const groups = [OLD_LINE_CONTENT, OLD_LINE_NUM, NEW_LINE_CONTENT, NEW_LINE_NUM]
 
-export default function DiffCodeViewer(props: DiffCodeViewerProps) {
+export function DiffCodeViewer(props: DiffCodeViewerProps) {
     const codeViewerRef = useRef<HTMLDivElement>()
     if (props.controlRef) {
         props.controlRef.current = {

@@ -8,7 +8,7 @@ export interface Item {
     name?: string
 }
 
-export default function (props: DiffCodeViewerListDemoProps) {
+export function DiffCodeViewerListDemo(props: DiffCodeViewerListDemoProps) {
     return <ViewerList<Item>
         style={{
             height: "100px",

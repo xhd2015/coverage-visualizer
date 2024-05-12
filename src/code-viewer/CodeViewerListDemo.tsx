@@ -1,5 +1,5 @@
 import { CSSProperties } from "react";
-import CodeViewerList, { File } from "./CodeViewerList";
+import { CodeViewerList, File } from "./CodeViewerList";
 import { compactLines, diffCode } from "./diff";
 import { ChangeType } from "./diff-vscode";
 import { DiffCodeViewerTitled } from "./DiffCodeViewer";
@@ -43,7 +43,7 @@ export interface CodeViewerListDemoProps {
 }
 
 // TODO: compact the code
-export default function CodeViewerListDemo(props: CodeViewerListDemoProps) {
+export function CodeViewerListDemo(props: CodeViewerListDemoProps) {
 
     return <CodeViewerList
         files={root.children}

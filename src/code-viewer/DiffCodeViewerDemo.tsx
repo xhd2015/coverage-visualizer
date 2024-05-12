@@ -1,4 +1,4 @@
-import DiffCodeViewer, { BlockLineProps, DiffCodeViewerTitled } from "./DiffCodeViewer";
+import { DiffCodeViewer, BlockLineProps, DiffCodeViewerTitled } from "./DiffCodeViewer";
 import { go } from "./lang"
 import "./CodeViewer.css"
 import { CLS_LINE_DELETE, CLS_LINE_NEW } from "./styles";
