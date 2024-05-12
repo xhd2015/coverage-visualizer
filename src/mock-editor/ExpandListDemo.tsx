@@ -21,7 +21,6 @@ const greyColor = "#97918B"
 const mockOkColor = "#6cc600" // green
 const mockMissingColor = "#000000" // black
 
-
 const demoItems: DemoItem[] = [{
     key: "Levi",
     name: "Levi",
@@ -66,7 +65,6 @@ traverse(demoItems, e => {
 })
 
 export default function () {
-
     const toggleExpandRef = useRef<() => void>()
     const [showErrOnly, setShowErrOnly] = useState(false)
     const [showMockOnly, setShowMockOnly] = useState(false)
