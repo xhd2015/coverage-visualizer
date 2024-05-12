@@ -84,7 +84,7 @@ export function DiffCodeViewerListTitledDemo(props: DiffCodeViewerListDemoProps)
             titleStyle={{
                 position: "sticky",
                 top: "0",
-                zIndex: "1",
+                zIndex: "20",
                 backgroundColor: "#FAFAFA",
             }}
             loadLines={async () => {

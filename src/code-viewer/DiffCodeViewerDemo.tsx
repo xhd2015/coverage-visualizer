@@ -1,14 +1,17 @@
-import DiffCodeViewer, { DiffCodeViewerTitled } from "./DiffCodeViewer";
+import DiffCodeViewer, { BlockLineProps, DiffCodeViewerTitled } from "./DiffCodeViewer";
 import { go } from "./lang"
 import "./CodeViewer.css"
-import { lineDelete, lineNew } from "./styles";
+import { CLS_LINE_DELETE, CLS_LINE_NEW } from "./styles";
 import { compactLines, diffCode, diffLines } from "./diff";
 import { ChangeType } from "./diff-vscode";
+import { useEffect, useState } from "react";
+import { debounce } from "lodash"
+import { GroupSelection } from "./select/select";
 
 export interface DiffCodeViewerDemoProps {
 }
 
-export default function (props: DiffCodeViewerDemoProps) {
+export function DiffCodeViewerByLinesDemo(props: DiffCodeViewerDemoProps) {
     return <DiffCodeViewer
         style={{
             width: "60%",
@@ -60,22 +63,124 @@ export default function (props: DiffCodeViewerDemoProps) {
                         oldLine: {
                             lineNumber: 1001,
                             value: "fmt.Printf('hello')",
-                            className: lineDelete,
+                            className: CLS_LINE_DELETE,
                             grammar: go.grammar,
                             language: go.langauge,
                         },
                         newLine: {
                             lineNumber: 3005,
                             value: "fmt.Printf('hello\\n')",
-                            className: lineNew,
+                            className: CLS_LINE_NEW,
                             grammar: go.grammar,
                             language: go.langauge,
+                            charRangeStyles: [
+                                // simple convert to span
+                                // {
+                                //     startCol: 1,
+                                //     endCol: 3,
+                                //     style: {
+                                //         // show as delete
+                                //         backgroundColor: "#ffadb9"
+                                //     }
+                                // },
+
+                                // partial convert in the middle
+                                {
+                                    startCol: 2,
+                                    endCol: 2,
+                                    style: {
+                                        // show as delete
+                                        backgroundColor: "#ffadb9"
+                                    }
+                                },
+
+                                // partial convert suffix
+                                // {
+                                //     startCol: 1,
+                                //     endCol: 2,
+                                //     style: {
+                                //         // show as delete
+                                //         backgroundColor: "#ffadb9"
+                                //     }
+                                // },
+
+                                // char range across multipe span
+                                // {
+                                //     startCol: 1,
+                                //     endCol: 4,
+                                //     style: {
+                                //         // show as delete
+                                //         backgroundColor: "#ffadb9"
+                                //     }
+                                // },
+                            ]
                         }
                     }
                 },
 
             ]
         }
+    />
+}
+
+export function DiffCodeViewerCharChangeDemo(props: DiffCodeViewerDemoProps) {
+    const [lines, setLines] = useState<BlockLineProps[]>()
+    useEffect(() => {
+        // diffCode(`fmt.Sprintf`, "fmt .HSpritf_z")
+        diffCode(`				AA: B`, `				AA:  B`)
+            // diffCode(`fmt.Sprintf`, "fmt .Sprintf")
+            .then(diffLines => {
+                console.log("diff:", diffLines)
+                setLines(diffLines.map(e => ({ line: e })))
+            })
+    }, [])
+
+    return <DiffCodeViewer
+        style={{
+            width: "60%",
+            marginLeft: "auto",
+            marginRight: "auto"
+        }}
+        lines={lines}
+    />
+}
+
+export function DiffCodeViewerMultilineSelectionDemo(props: DiffCodeViewerDemoProps) {
+    const [lines, setLines] = useState<BlockLineProps[]>()
+    useEffect(() => {
+        // diffCode(`fmt.Sprintf`, "fmt .HSpritf_z")
+        diffCode(`AAA\nBBB\nDD`, ` AAA\nBB\nCC\nDD`)
+            // diffCode(`fmt.Sprintf`, "fmt .Sprintf")
+            .then(diffLines => {
+                console.log("diff:", diffLines)
+                setLines(diffLines.map(e => ({ line: e })))
+            })
+    }, [])
+
+    // const groups = [
+    //     ".code-viewer-line-old-container .code-viewer-line-content",
+    //     ".code-viewer-line-old-container .code-viewer-line-number",
+    //     ".code-viewer-line-new-container .code-viewer-line-content",
+    //     ".code-viewer-line-new-container .code-viewer-line-number",
+    // ]
+
+    // useEffect(() => {
+    //     const handler = new GroupSelection(document, groups, {
+    //         onSelect: (group, start, end) => {
+    //             console.log("select:", group, start, end)
+    //         }
+    //     })
+    //     return () => handler.dispose()
+    // }, [])
+
+    return <DiffCodeViewer
+        style={{
+            width: "60%",
+            marginLeft: "auto",
+            marginRight: "auto"
+        }}
+        fullDiff
+        lines={lines}
     />
 }
 

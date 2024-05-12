@@ -3,6 +3,8 @@
     background-color: white;
 }
 
+/*.code-viewer.full-diff -> full diff view*/
+
 .code-viewer-titled {
     border: 1px solid #dbdbdb;
     /* border-top: 0; */
@@ -22,27 +24,53 @@
     text-align: right;
 }
 
-.code-viewer-line.code-viewer-line-new {
+/*by default hide content, enable with with full diff */
+.code-viewer.full-diff .code-viewer-line.code-viewer-line-new {
     background-color: #ECFCF0;
     /*green like*/
 }
 
+.code-viewer-line .code-viewer-char-range-new {
+    background-color: #c7f0d2;
+    /*deeper green like*/
+}
+
+/*take priorty*/
+/* .code-viewer-line.code-viewer-line-new.line-covered { */
+/* background-color: #CFFFFB; */
+/*green like*/
+/* } */
+
+/* .code-viewer-line.code-viewer-line-new.line-uncovered { */
+/* background-color: #F9E5CC; */
+/*green like*/
+/* } */
 
 .code-viewer-line.code-viewer-line-new .code-viewer-line-number {
     /*green darker*/
     background-color: #DDFBE5;
 }
 
+/*plain delete*/
+
+/*an old line with new content marked delete */
+.code-viewer.full-diff .code-viewer-line:has(+ .code-viewer-line.code-viewer-line-new),
 .code-viewer-line.code-viewer-line-delete {
     background-color: #FBE9EB;
     /*red like*/
 }
 
+.code-viewer-line .code-viewer-char-range-delete {
+    background-color: rgb(250 187 196);
+    /*deeper red like*/
+}
+
+/*plain delete line num*/
+.code-viewer.full-diff .code-viewer-line:has(+ .code-viewer-line.code-viewer-line-new) .code-viewer-line-number,
 .code-viewer-line.code-viewer-line-delete .code-viewer-line-number {
     /*red darker*/
     background-color: #F8D7DC;
 }
-
 
 .code-viewer-line-content {
     position: relative;
@@ -50,6 +78,7 @@
     white-space: pre-wrap;
     padding-left: 20px;
     line-break: anywhere;
+    width: 100%;
 }
 
 .code-viewer-line.code-viewer-line-new .code-viewer-line-number:after {
@@ -61,6 +90,7 @@
     z-index: 1;
 }
 
+.code-viewer.full-diff .code-viewer-line:has(+ .code-viewer-line.code-viewer-line-new) .code-viewer-line-number:after,
 .code-viewer-line.code-viewer-line-delete .code-viewer-line-number:after {
     content: '-';
     position: absolute;
