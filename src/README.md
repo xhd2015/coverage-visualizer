@@ -1,10 +1,16 @@
 # Demos
 Build demo.js:
 ```sh
-bun src/build/build.ts src/demo.ts
-bun src/build/build.ts --watch src/demo.ts
+bun src/build/build.ts --gen-html src/demo.ts
+bun src/build/build.ts --gen-html --watch src/demo.ts
 ```
 
+Open demo.html
+```sh
+open src/demo.html
+```
+
+# Serve via http server
 Serve demo.html
 ```sh
 bun install -g http-server

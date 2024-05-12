@@ -119,8 +119,10 @@ export default function (props: LayoutLeftRightProps) {
         }
         const observer = new ResizeObserver(() => {
             window.requestAnimationFrame(() => {
-                const rightHeight = rightDivRef.current.getBoundingClientRect().height
-                leftDivRef.current.style.height = rightHeight + "px"
+                if (rightDivRef.current) {
+                    const rightHeight = rightDivRef.current.getBoundingClientRect().height
+                    leftDivRef.current.style.height = rightHeight + "px"
+                }
             })
         })
         observer.observe(rightDivRef.current)

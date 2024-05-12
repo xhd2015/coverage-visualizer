@@ -125,23 +125,30 @@ interface HTMLOptions {
 }
 
 function packHTML(opts?: HTMLOptions) {
-    //  type="module" is required
+    // type="module" is required
+    // comments in generated html like __CUSTOM_EXTENSION_HEAD_BEGIN__
+    // are reserved for other tools to replace with custom content easily
     return `<!DOCTYPE html>
     <html lang="en" style="height: 100%;">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>${opts?.title || "Demo"}</title>
+        <!--__CUSTOM_EXTENSION_HEAD_BEGIN__-->
         <style>
         ${opts?.style || ""} 
         </style>
         <script type="module">
+        <!--__CUSTOM_EXTENSION_IN_SCRIPT__-->
         ${safeScript(opts?.script || "")}
         </script>
+        <!--__CUSTOM_EXTENSION_HEAD_END__-->
     </head>
     <body style="height: 100%;">
         <div id="root" style="height: 100%;"></div>
+        <!--__CUSTOM_EXTENSION_BODY__-->
     </body>
+    <!--__CUSTOM_EXTENSION_TAIL__-->
     </html>
 `
 }

@@ -28,7 +28,7 @@ export interface VirtualListProps<T extends Key> {
 }
 
 
-export default function <T extends Key>(props: VirtualListProps<T>) {
+export default function VirtualList<T extends Key>(props: VirtualListProps<T>) {
     const containerRef = useRef<HTMLDivElement>()
     const virtualComponentRef = useRef<IVirtualCompoment<T>>()
     if (props.controllerRef) {
@@ -61,7 +61,7 @@ export default function <T extends Key>(props: VirtualListProps<T>) {
     }, [])
 
     useEffect(() => {
-        virtualComponentRef.current.reset()
+        virtualComponentRef.current.reset({ keepItems: true, keepScroll: true, newItems: props.items || [] })
     }, [props.items])
 
     return <div style={props.style} ref={containerRef}>
@@ -82,29 +82,43 @@ export interface VirtualComponentOptions<T extends Key> {
     maxRendering: number // must be set explicitly, maybe only for initial rendering
 }
 
-export interface IVirtualCompoment<T> {
-    updateOptions(opts: Partial<VirtualComponentOptions<T>>)
-    reset: () => void
+export interface ResetOptions<T> {
+    keepItems?: boolean
+    keepScroll?: boolean
+
+    newItems?: T[]
+    init?: boolean
+}
+
+export interface IVirtualCompoment<T extends Key> {
+    updateOptions: (opts: Partial<VirtualComponentOptions<T>>) => void
+    reset: (opts?: ResetOptions<T>) => void
     scrollTo: (index: number) => void
-
-
     dispose: () => void
 }
 
-class VirtualCompoment<T> implements IVirtualCompoment<T> {
+interface ElementAndItem<T> {
+    item: T
+    element: HTMLElement
+}
+
+// `mount` in VirtualList means loading the item, and add it to the document container
+class VirtualCompoment<T extends Key> implements IVirtualCompoment<T> {
     opts: VirtualComponentOptions<T>
 
     items?: T[]
     baseIndex: number
-    loadedNum: number
 
     container: HTMLElement
     scrollParent: HTMLElement
 
     // state
-    loading: boolean
-    cachedItems: { [index: number]: HTMLElement } // trigger load exactly once
-    mounted: { [index: number]: HTMLElement }
+    mounting: boolean
+    cachedItems: { [index: number]: ElementAndItem<T> } // trigger load exactly once
+    // mounted by item key
+    mountedMap: Map<string | number, boolean>
+    // mounted by index
+    mounted: { [index: number]: ElementAndItem<T> }
     _handlersRemove: (() => void)[]
 
     constructor(opts: VirtualComponentOptions<T>) {
@@ -122,8 +136,9 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
             throw new Error("scrollParent not found")
         }
 
+        this.mountedMap = new Map()
         // reset state
-        this.reset()
+        this.reset({ init: true })
     }
     updateOptions(opts: Partial<VirtualComponentOptions<T>>) {
         this.opts = { ...this.opts, ...opts }
@@ -144,30 +159,36 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         // because children does not overlap
         // NOTE: first and last child can be the same
         const handler = e => {
+            // console.log("DEBUG handler:", e)
             // special callback, do not rely on this
-            const { baseIndex, loadedNum, loading } = this
-            const { maxRendering, loadItems } = this.opts
-            const setLoading = (b: boolean) => this.loading = b
+            const { baseIndex, mountedCount: loadedNum, mounting } = this
+            const { maxRendering: maxPreRender, loadItems } = this.opts
+            const setMounting = (b: boolean) => this.mounting = b
 
+            // scrollTop is used to decide scroll direction: up or down.
             const scrollParent: HTMLElement = e.target
             const lastScrollTop = savedScrollTop
+
+            // console.log("DEBUG savedScrollTop,currentScrollTop:", savedScrollTop, scrollParent.scrollTop)
+
             savedScrollTop = scrollParent.scrollTop // change when scroll
 
-            if (loading) {
+            if (mounting) {
                 return
             }
 
             // calculate the slice
-            if (!(maxRendering > 0)) {
+            if (!(maxPreRender > 0)) {
                 throw new Error("option maxRendering should be positive")
             }
 
-            const { firstChildIndex, firstChild, lastChildIndex, lastChild } = findFirstLastChildren(scrollParent, container)
-            // console.log("find child:", firstChildIndex, lastChildIndex)
+            // console.log("DEBUG scrollParent:", scrollParent)
+            const { firstChildIndex, firstChild, lastChildIndex, lastChild } = findTopAndBottomChildren(scrollParent, container)
+            // console.log("DEBUG find child:", firstChildIndex, lastChildIndex)
 
             // calcaulte previous items
+            // scroll up?
             if (typeof lastScrollTop === 'number' && savedScrollTop <= lastScrollTop) {
-                // scroll up
                 // console.log("DEBUG scroll up:", firstChildIndex, lastChildIndex)
                 // if (savedScrollTop === lastScrollTop) {
                 //     return
@@ -177,35 +198,44 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
                 // if scroll up, we prepend previous element
                 if (firstIndex > 0) {
                     // load previous 1 item
-                    const loadBefore = 4
+                    const mountBefore = this.opts.maxRendering
+                    // const mountBefore = 4
                     // firstIndex=6, base=2  [0,1,2,3,4,5,6]
                     // load: 2,3,4,5
-                    let base = firstIndex - loadBefore
-                    let actualLoadBefore = loadBefore
+                    let base = firstIndex - mountBefore
+                    let needMount = mountBefore
                     if (base < 0) {
-                        actualLoadBefore += base
+                        needMount += base
                         base = 0
                     }
-                    const savedOffset = getOffsetHeightParent(container, firstChild)
-
-                    setLoading(true)
-                    Promise.resolve(loadItems?.(base, actualLoadBefore)).then(items => {
+                    // firstChild might be null, causing NPE
+                    // const savedOffset = getOffsetHeightParent(container, firstChild)
+                    // let addedHeight = 0
+                    // console.log("DEBUG mounting range:", base, base + needMount)
+                    setMounting(true)
+                    Promise.resolve(loadItems?.(base, needMount)).then(items => {
                         // insert reversely
                         let last = firstChild
                         for (let i = items?.length - 1; i >= 0; i--) {
                             const item = items[i]
                             const anchor = last
                             const el = this._renderItemCached(item, base + i)
-                            last = el
+                            last = el.element
                             if (this.mounted[base + i]) {
                                 return
                             }
 
-                            this.container.insertBefore(el, anchor)
+                            this.container.insertBefore(el.element, anchor)
+                            // addedHeight += el.element.getClientRects()?.[0]?.height ?? 0
                             this.mounted[base + i] = el
+                            this.mountedMap.set(item.key, true)
                             this.baseIndex--
                         }
-                    }).finally(() => setLoading(false))
+                        firstChild.scrollIntoView()
+                        // not working, because height is not stable
+                        // adjust y offset
+                        // this.scrollParent.scrollBy(0, addedHeight)
+                    }).finally(() => setMounting(false))
                 }
                 return
             }
@@ -217,14 +247,17 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
             // there are 'firstChildIndex' element ahead, 
             // so the trailing need to load these more items as
             // complement
-            console.log("render:", loadedNum, firstChildIndex, maxRendering)
+            // console.log(`DEBUG render loadedNum=${loadedNum},firstChildIndex=${firstChildIndex},maxRendering=${maxPreRender}`)
+
+            // check if we need to pre-render `maxRendering` items?
+            // `maxRendering` means max preview render
             const newNum = firstChildIndex
-            if (loadedNum - newNum >= maxRendering) { // already satisfied
-                // console.log("loaded num satisfied:", loadedNum, newNum, maxRendering)
+            if (loadedNum - newNum >= maxPreRender) { // already satisfied
+                // console.log("DEBUG loaded num satisfied:", loadedNum, newNum, maxPreRender)
                 return
             }
             // protect rendering
-            this._loadRange(baseIndex + loadedNum, newNum)
+            this._mounteRange(baseIndex + loadedNum, newNum)
         }
         const handlerDebounced = lodash.debounce(handler, 200)
         // const handlerDebounced = handler
@@ -232,7 +265,7 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         // scrollParent.addEventListener('wheel', handlerDebounced)
 
         // initial load
-        this._loadRange(this.baseIndex, this.opts.maxRendering)
+        this._mounteRange(this.baseIndex, this.opts.maxRendering)
         this._handlersRemove.push(() => {
             scrollParent.removeEventListener('scroll', handlerDebounced)
             // scrollParent.removeEventListener('wheel', handlerDebounced)
@@ -242,18 +275,19 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
     _bindListeners() {
     }
 
+    // mounte
     // must ensure not loading
     // index is absolute
-    async _loadRange(index: number, num: number) {
+    async _mounteRange(index: number, num: number) {
         if (num <= 0) {
             return
         }
-        // console.log("DEBUG load range :", index, index + num, ", current range:", this.baseIndex, this.baseIndex + this.loadedNum)
+        // console.log("DEBUG load range :", index, index + num, ", current range:", this.baseIndex, this.baseIndex + this.mountedCount)
 
         const endIndex = index + num
         // already loaded
-        if (endIndex <= this.loadedNum) {
-            // console.log("DEBUG already loaded range :", index, index + num)
+        if (endIndex <= this.mountedCount) {
+            // console.log("DEBUG already mounted range :", index, index + num)
             return
         }
 
@@ -261,18 +295,19 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         const { container } = this
         const { loadItems } = this.opts
 
-        const setLoading = (b: boolean) => _this.loading = b
+        const setMounting = (b: boolean) => _this.mounting = b
 
-        setLoading(true)
+        setMounting(true)
         await Promise.resolve(loadItems?.(index, num))?.then(newItems => {
+            // console.log("DEBUG loaded items:", newItems)
             newItems.forEach((item, i) => {
                 let el = this._renderItemCached(item, index + i)
-                this.container.appendChild(el)
+                this.container.appendChild(el.element)
                 this.mounted[index + i] = el
-                this.loadedNum++
+                this.mountedMap.set(item.key, true)
             })
         }).finally(() => {
-            setLoading(false)
+            setMounting(false)
             // console.log("DEBUG load range done:", index, index + num, ", current range:", this.baseIndex, this.baseIndex + this.loadedNum)
         })
     }
@@ -281,7 +316,8 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         let { renderItem } = this.opts
         let el = this.cachedItems[index]
         if (!el) {
-            el = renderItem(item, index, this.container)
+            const element = renderItem(item, index, this.container)
+            el = { item, element }
             this.cachedItems[index] = el
         }
         return el
@@ -292,13 +328,56 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
 
     }
 
-    reset() {
+    reset(opts?: ResetOptions<T>) {
         // console.log("DEBUG items reset")
+        function itemsAreSame(a: T[], b: T[]) {
+            if ((a?.length || 0) !== (b?.length || 0)) {
+                return false
+            }
+            for (let i = 0; i < a.length; i++) {
+                if (a[i].key !== b[i].key) {
+                    return false
+                }
+            }
+            return true
+        }
+
+        // if all item keys not change, then don't reset anything
+        // TODO: calculate diff, do smart scroll
+        const oldItems = this.items || []
+        const newItems = opts?.newItems || []
+        this.items = newItems
+        if (!opts?.init && itemsAreSame(oldItems, newItems)) {
+            return
+        }
+
         this.baseIndex = 0
-        this.loadedNum = 0
-        this.cachedItems = {}
+        if (!opts?.keepItems) {
+            this.cachedItems = {}
+        } else if (opts?.newItems !== undefined) {
+            // remap items by key
+            const cachedItemsByKey: { [key: string]: HTMLElement } = {}
+            // const cacheReusued: { [key: string]: boolean } = {}
+            for (let [_, cachedItem] of Object.entries(this.cachedItems || {})) {
+                cachedItemsByKey[cachedItem.item.key] = cachedItem.element
+                // cacheReusued[cachedItem.item.key] = false
+            }
+
+            const newCachedItems: { [idx: number]: ElementAndItem<T> } = {}
+            for (let i = 0; i < opts?.newItems?.length; i++) {
+                const key = opts.newItems[i].key
+                const prevElement = cachedItemsByKey[key]
+                if (prevElement) {
+                    newCachedItems[i] = { item: opts.newItems[i], element: prevElement }
+                    // cacheReusued[key] = true
+                }
+            }
+            // console.log("cacheReusued:", cacheReusued)
+            this.cachedItems = newCachedItems
+        }
+        this.mountedMap.clear()
         this.mounted = {}
-        this.loading = false
+        this.mounting = false
         // remove all children
         for (let p = this.container.firstElementChild; p;) {
             let next = p.nextElementSibling
@@ -309,13 +388,19 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
         this._handlersRemove = []
         handlersRemove?.forEach?.(h => h())
 
-        this.scrollParent.scrollTo({ behavior: "smooth", top: 0 })
+        if (!opts?.keepScroll) {
+            this.scrollParent.scrollTo({ behavior: "smooth", top: 0 })
+        }
         this._setupScrollHandler()
+    }
+
+    get mountedCount(): number {
+        return this.mountedMap.size
     }
 
     async scrollTo(index: number) {
         // console.log("DEBUG scrollTo:", index)
-        if (this.loading) {
+        if (this.mounting) {
             return
         }
         // remove all child
@@ -324,16 +409,16 @@ class VirtualCompoment<T> implements IVirtualCompoment<T> {
             p.remove()
             p = next
         }
-        this.loadedNum = 0
+        this.mountedMap.clear()
         this.mounted = {}
 
         if (index > 0) {
             this.baseIndex = index - 1
-            await this._loadRange(index - 1, this.opts.maxRendering + 1)
-            this.scrollParent.scrollTo({ behavior: "smooth", top: getOffsetHeightParent(this.container, this.mounted[index]) })
+            await this._mounteRange(index - 1, this.opts.maxRendering + 1)
+            this.scrollParent.scrollTo({ behavior: "smooth", top: getOffsetHeightParent(this.container, this.mounted[index].element) })
         } else {
             this.baseIndex = index
-            await this._loadRange(index, this.opts.maxRendering)
+            await this._mounteRange(index, this.opts.maxRendering)
             this.scrollParent.scrollTo({ behavior: "smooth", top: 0 })
         }
     }
@@ -347,7 +432,7 @@ function getOffsetHeightParent(container: Element, el: Element): number {
     return el.getBoundingClientRect().y - container.getBoundingClientRect().y
 }
 
-function findFirstLastChildren(scrollParent: HTMLElement, container: HTMLElement) {
+function findTopAndBottomChildren(scrollParent: HTMLElement, container: HTMLElement) {
     const rect = scrollParent.getBoundingClientRect()
     const y = rect.y
     const endY = y + rect.height
@@ -452,7 +537,7 @@ export function old<T extends Key>(props: VirtualListProps<T>) {
         // NOTE: first and last child can be the same
         const handler = e => {
             const target: HTMLElement = e.target
-            const { firstChildIndex, lastChildIndex } = findFirstLastChildren(target, rootEl.current)
+            const { firstChildIndex, lastChildIndex } = findTopAndBottomChildren(target, rootEl.current)
             console.log("find child:", firstChildIndex, lastChildIndex)
             // calculate the slice
             let { maxLeading, maxRendering, maxTrailing, items } = propsRef.current
@@ -471,7 +556,7 @@ export function old<T extends Key>(props: VirtualListProps<T>) {
                 last -= n - maxRendering
             }
 
-            console.log("render new range:", first, last)
+            // console.log("render new range:", first, last)
 
             // destroy other items
             // setRenderList(items.slice(baseIndex.current + first, baseIndex.current + last + 1))

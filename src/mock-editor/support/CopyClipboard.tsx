@@ -1,12 +1,13 @@
 
 
-import { useState, createElement } from "react"
+import { useState, createElement, CSSProperties } from "react"
 import { AiOutlineCopy, AiOutlineCheck, AiOutlineExclamationCircle } from "react-icons/ai"
 import { setClipboard } from "../util/clipboard"
 
 export type CopyStatus = "Copy" | "Copied" | "Copy Failed"
 
 export interface CopyClipboardProps {
+    style?: CSSProperties
     text?: string
 
     copyIcon?: any
@@ -21,8 +22,9 @@ export default function (props: CopyClipboardProps) {
     return <>
         {
             copyStatus === "Copy" && createElement(props.copyIcon || AiOutlineCopy, {
-                style: { cursor: "pointer" },
-                onClick: () => {
+                style: { cursor: "pointer", ...props.style },
+                onClick: (e) => {
+                    e.stopPropagation()
                     if (!props.text) {
                         return
                     }
