@@ -97,7 +97,7 @@ func main(){
                 if (file === 'test/main_test.go') {
                     newCode = newCode.repeat(100)
                 }
-                const blockLines = diffCode(
+                const blockLines = await diffCode(
                     `package main
 
 func main(){

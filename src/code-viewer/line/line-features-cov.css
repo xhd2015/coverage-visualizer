@@ -1,0 +1,24 @@
+.code-viewer-line.line-covered .code-viewer-line-content {
+    background-color: #CFFFFB;
+}
+
+.code-viewer-line.line-uncovered .code-viewer-line-content {
+    background-color: #F9E5CC;
+}
+
+/* 
+.code-viewer-line.code-viewer-line-new.line-new-disabled .code-viewer-line-content {
+    background-color: unset;
+} */
+/* 
+.code-viewer-line.code-viewer-line-delete.line-delete-disabled {
+    background-color: unset;
+}
+
+.code-viewer-line.code-viewer-line-delete.line-delete-disabled .code-viewer-line-number {
+    background-color: unset;
+}
+
+.code-viewer-line.code-viewer-line-delete.line-delete-disabled .code-viewer-line-content {
+    background-color: unset;
+} */

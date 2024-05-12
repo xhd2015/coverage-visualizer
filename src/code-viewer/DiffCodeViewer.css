@@ -1,0 +1,7 @@
+.code-viewer-line .line-hover-element {
+    display: none;
+}
+
+.code-viewer-line:hover .line-hover-element {
+    display: block;
+}

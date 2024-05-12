@@ -1,0 +1,16 @@
+.code-viewer-line .new-line-content-label-container {
+    display: none;
+}
+
+.code-viewer-line:hover .new-line-content-label-container {
+    display: inline;
+}
+
+
+.code-viewer-line .old-line-content-label-container {
+    display: none;
+}
+
+.code-viewer-line:hover .old-line-content-label-container {
+    display: inline;
+}
