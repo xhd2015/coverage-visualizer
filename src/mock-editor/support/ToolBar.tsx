@@ -1,5 +1,7 @@
 import { Input, Select } from 'antd';
 import { useState } from 'react';
+import { useLanguages } from '../../lang/context';
+import { searchFileOrDirPlaceholder, toolBarExpand1, toolBarExpand2, toolBarExpand3, toolBarExpandAll } from '../../lang/lang-texts';
 
 export interface ToolBarProps {
   onToggleExpand?: (depth: number) => void;
@@ -10,6 +12,7 @@ export interface ToolBarProps {
 const MAX_NODE_DEPTH = 100;
 
 export default function ToolBar(props: ToolBarProps) {
+  const languages = useLanguages()
   const [val, setVal] = useState('');
   const [level, setLevel] = useState(MAX_NODE_DEPTH);
 
@@ -35,7 +38,7 @@ export default function ToolBar(props: ToolBarProps) {
           }
         }}
         allowClear
-        placeholder="搜索文件或目录"
+        placeholder={searchFileOrDirPlaceholder.getText(languages)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             if (val) {
@@ -54,22 +57,23 @@ export default function ToolBar(props: ToolBarProps) {
             setLevel(Number(v));
             props.onToggleExpand(Number(v));
           }}
+          dropdownMatchSelectWidth={false}
           options={[
             {
               value: MAX_NODE_DEPTH,
-              label: '全部展开',
+              label: toolBarExpandAll.getText(languages),
             },
             {
               value: 1,
-              label: '一级展开',
+              label: toolBarExpand1.getText(languages),
             },
             {
               value: 2,
-              label: '二级展开',
+              label: toolBarExpand2.getText(languages),
             },
             {
               value: 3,
-              label: '三级展开',
+              label: toolBarExpand3.getText(languages),
             },
           ]}
         />
