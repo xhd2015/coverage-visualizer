@@ -149,3 +149,28 @@ export const coverageMenuAdvanced = newTextMapping({
     en: "Advanced",
     zh: "高级"
 })
+
+export const coverageLabelDisplayPrompt = newTextMapping({
+    en: "Labels:",
+    zh: "标签:"
+})
+
+export const coverageDisplayPrompt = newTextMapping({
+    en: "Coverage Display:",
+    zh: "覆盖率展示:"
+})
+
+export const coverageModeLinePercentage = newTextMapping({
+    en: "Percentage",
+    zh: "百分比"
+})
+
+export const coverageModeLineCount = newTextMapping({
+    en: "Line Count",
+    zh: "行计数"
+})
+
+export const coverageThreshold = newTextMapping({
+    en: "Threshold:",
+    zh: "覆盖率阈值:"
+})

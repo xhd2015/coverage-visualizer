@@ -82,6 +82,7 @@ export type CoverageMode = 'percentage' | 'line'
 export interface renderCovPathOptions {
   ratioBase?: number // 0.5
   coverageMode?: CoverageMode
+  zeroAsGood?: boolean
 }
 
 export function div(a: number, b: number): number {
@@ -101,16 +102,23 @@ export function renderPathCovHTML(filename: string, cov: FileCoverage | undefine
 
 export interface FileCoverage {
   percent: string
-  good: boolean
+  good?: boolean
 }
+export interface FileCoverages {
+  before?: FileCoverage
+  coverage: FileCoverage
+}
+
 export function getFileCoverage(total: number, covered: number, opts?: renderCovPathOptions): (FileCoverage | undefined) {
   if (!(total > 0)) {
+    if (opts?.zeroAsGood) {
+      return { percent: opts?.coverageMode === 'line' ? "0 / 0" : "100%", good: true }
+    }
     return
   }
   const ratioBase = opts?.ratioBase > 0 ? opts.ratioBase : 0.5
   const coverRatio = div(covered, total)
-  const { coverageMode } = opts || {}
-  const showValue = coverageMode === 'line' ? `${covered} / ${total}` : divPercentFloor(covered, total)
+  const showValue = opts?.coverageMode === 'line' ? `${covered} / ${total}` : divPercentFloor(covered, total)
 
   return { percent: showValue, good: coverRatio >= ratioBase }
 }
@@ -131,10 +139,13 @@ export function divPercentFloorInt(a, b): string {
 
 export function percentFloor(r): string {
   if (r >= 0) {
-    return `${floorWithTwoPoints(r)}%`
+    return `${floorWithoutPoints(r)}%`
   }
   return ''
 }
 export function floorWithTwoPoints(x: number): number {
   return Math.floor(Number(x * 10000)) / 100
+}
+export function floorWithoutPoints(x: number): number {
+  return Math.floor(Number(x * 100))
 }
