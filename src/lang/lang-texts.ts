@@ -46,7 +46,7 @@ export const updatedDescColorGreen = newTextMapping({
 })
 
 export const updatedDescEnd = newTextMapping({
-    "en": " marking update, ",
+    "en": " marks update, ",
     "zh": "标记变更，"
 })
 
@@ -56,7 +56,7 @@ export const updatedDescColorRed = newTextMapping({
 })
 
 export const updatedDescMarkingDelete = newTextMapping({
-    "en": " marking deletion",
+    "en": " marks deletion",
     "zh": "标记删除"
 })
 
@@ -71,7 +71,7 @@ export const coverageDescLightBlue = newTextMapping({
 })
 
 export const coverageDescMarkingCovered = newTextMapping({
-    "en": " marking a line was covered,",
+    "en": " marks a line was covered,",
     "zh": "标记代码行已被覆盖,"
 })
 
@@ -80,7 +80,7 @@ export const coverageDescLightYellow = newTextMapping({
     "zh": "浅黄色"
 })
 export const coverageDescMarkingNotCovered = newTextMapping({
-    "en": " marking a line was not covered",
+    "en": " marks a line was not covered",
     "zh": "标记代码行未被覆盖"
 })
 
