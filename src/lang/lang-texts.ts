@@ -1,5 +1,10 @@
 import { LanguageTextMapping, newTextMapping } from "./lang"
 
+export const overallCoveragePrompt = newTextMapping({
+    en: "Overall Coverage: ",
+    zh: "整体覆盖率"
+})
+
 export const incrementSwitchPrompt = newTextMapping({
     "en": "Empty files, switch to ",
     "zh": "增量文件为空,切换到 ",

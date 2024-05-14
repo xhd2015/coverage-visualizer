@@ -260,13 +260,19 @@ function FileRender(props: { file: File; onClick?: any, searchContent?: string; 
                     // fontWeight: '600'
                 }}
             >
-                {
-                    beforeCoverage && <><RenderFileCoverage coverage={beforeCoverage} /> <DirectionIcon /></>
-                }
-                <RenderFileCoverage coverage={coverage} />
+                <RenderBeforeAfterCoverage coverage={coverage} beforeCoverage={beforeCoverage} />
             </span>
         </div>
     );
+}
+
+export function RenderBeforeAfterCoverage(props: { coverage: FileCoverage, beforeCoverage?: FileCoverage }) {
+    const { coverage, beforeCoverage } = props
+    return <>{
+        beforeCoverage && <><RenderFileCoverage coverage={beforeCoverage} /> <DirectionIcon /></>
+    }
+        <RenderFileCoverage coverage={coverage} />
+    </>
 }
 
 export function DirectionIcon(props) {
