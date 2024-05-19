@@ -2,7 +2,7 @@
 import { createElement, CSSProperties, FunctionComponent, useEffect, useMemo, useRef, useState } from "react"
 import { AiOutlineCheckCircle, AiOutlineClockCircle, AiOutlineCloseCircle, AiOutlineExclamationCircle, AiOutlineMinusCircle, AiOutlinePlus } from "react-icons/ai"
 import { BsCircle } from "react-icons/bs"
-import { VscNewFolder } from "react-icons/vsc"
+import { VscNewFolder, VscRefresh } from "react-icons/vsc"
 
 import { MdContentCopy } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
@@ -60,6 +60,7 @@ export interface TestingListProps {
     onAllRan?: (counters?: StateCounters) => void
 
     onTreeChangeRequested?: () => void
+    onRefreshRoot?: () => void
 
     onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex, update: (fn: (item: TestingStatItem) => TestingStatItem) => void) => void
 
@@ -171,7 +172,7 @@ export default function (props: TestingListProps) {
     }, [items])
 
     const runItem = async (item: TestingStatItem, path: ItemPath, notifyUpdate: () => void) => {
-        console.log("DEBUG runItem:", path.join("/"), item)
+        // console.log("DEBUG runItem:", path.join("/"), item)
         if (item.status === "running") {
             // disable when already running
             return// running by other, so here skip
@@ -273,6 +274,8 @@ export default function (props: TestingListProps) {
             controllerRef={expandListController}
             initialAllExpanded={true}
             toggleExpandRef={toggleExpandRef}
+            clickStyleUseV1
+            expandIconUseV1
             render={(item, controller) => <ItemRender
                 item={item}
                 controller={controller}
@@ -295,7 +298,7 @@ export default function (props: TestingListProps) {
                     const runAction = () => {
                         const isRoot = controller.path?.length <= 1
                         let needSave = isRoot
-                        console.log("DEBUG run:", controller.path, isRoot)
+                        // console.log("DEBUG run:", controller.path, isRoot)
                         // if (true) {
                         //     return
                         // }
@@ -368,6 +371,8 @@ export default function (props: TestingListProps) {
                     // }
                     // props.checkBeforeSwitch(action)
                 }}
+                onRefreshRoot={props.onRefreshRoot}
+
             />}
         />
     </div>
@@ -394,6 +399,7 @@ export function ItemRender(props: {
     api?: TestingAPI,
     onClickRun?: () => void,
     onTreeChangeRequested?: () => void
+    onRefreshRoot?: () => void
 }) {
     const { item, controller, api, onTreeChangeRequested } = props
     const isRoot = controller && controller.path.length <= 1
@@ -431,8 +437,9 @@ export function ItemRender(props: {
             className="testing-item-menu"
             style={{
                 marginLeft: "auto",
-                display: props.isRoot ? "flex" : undefined,
-                flexWrap: "nowrap", alignItems: 'center'
+                display: props.isRoot ? "flex" : undefined /* if root ,override display:none; otherwise use display:none */,
+                flexWrap: "nowrap",
+                alignItems: 'center'
             }} >
             {
                 isRoot && <small style={{ marginLeft: "auto", marginRight: "4px" }}>
@@ -492,6 +499,13 @@ export function ItemRender(props: {
                             onTreeChangeRequested?.()
                         })
                     }
+                }} />
+            }
+
+            {
+                isRoot && <VscRefresh onClick={e => {
+                    e.stopPropagation()
+                    props.onRefreshRoot?.()
                 }} />
             }
         </div>

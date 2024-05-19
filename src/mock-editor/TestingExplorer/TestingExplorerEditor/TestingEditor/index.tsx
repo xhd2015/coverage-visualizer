@@ -1,11 +1,11 @@
 import { debounce } from "lodash";
 import React, { useEffect, useState } from "react";
+import TextEditor from "../../../TextEditor";
 import { useCurrent } from "../../../react-hooks";
 import Button from "../../../support/Button";
 import Checkbox from "../../../support/Checkbox";
 import { ConfirmDialog } from "../../../support/Dialog";
 import EditView from "../../../support/EditView";
-import TextEditor from "../../../TextEditor";
 import "./TestingEditor.css";
 
 export interface TestingCaseConfig {
@@ -72,6 +72,11 @@ export interface TestingEditorControl {
 }
 
 export interface TestingEditorProps {
+
+    disableName?: boolean
+    disableSave?: boolean
+    disableAssert?: boolean
+
     config?: TestingCaseConfig
     result?: TestingCaseResult
 
@@ -86,21 +91,6 @@ export interface TestingEditorProps {
     onRequest?: () => void
 }
 
-function getResultHint(resultStatus: ResultStatus) {
-    let color = ""
-    let title = ""
-    if (resultStatus === "fail") {
-        color = "red"
-        title = "FAIL"
-    } else if (resultStatus === "pass") {
-        color = "green"
-        title = "PASS"
-    } else if (resultStatus === "warning") {
-        color = "orange"
-        title = "WARN"
-    }
-    return { color, title }
-}
 export default function (props: TestingEditorProps) {
     const { config, result } = props
 
@@ -185,49 +175,58 @@ export default function (props: TestingEditorProps) {
     return <div>
         {props.header}
         <div className="flex-center">
-            <div style={{ display: "flex", alignItems: "baseline" }}>
-                <div className="testing-editor-title" >Name:</div>
-                <EditView
-                    value={name}
-                    onChange={(value) => {
-                        setName(value)
-                    }}
-                />
-                <Checkbox label="Skip" value={skip} onChange={(value) => {
-                    setSkip(value)
-                }} style={{ marginLeft: "12px", alignSelf: "end" }} />
+            {
+                !props.disableName &&
+                <div style={{ display: "flex", alignItems: "baseline" }}>
+                    <div className="testing-editor-title" >Name:</div>
+                    <EditView
+                        value={name}
+                        onChange={(value) => {
+                            setName(value)
+                        }}
+                    />
+                    <Checkbox label="Skip" value={skip} onChange={(value) => {
+                        setSkip(value)
+                    }} style={{ marginLeft: "12px", alignSelf: "end" }} />
+                </div>
+            }
+            {
+                !props.disableSave &&
+                <div style={{ marginLeft: "auto" }}>
+                    <Button
+                        className="testing-editor-button"
+                        loading={saving}
+                        onClick={doSave}
+                    > <span>{saving ? "Saving" : "Save"}{modified && "*"}</span></Button></div>
+            }
+        </div>
+        {
+            !props.disableName && <div >
+                <div className="testing-editor-title">Comment</div>
+                <CommentEditor value={comment} onChange={setComment} />
             </div>
-            <div style={{ marginLeft: "auto" }}>
-                <Button
-                    className="testing-editor-button"
-                    loading={saving}
-                    onClick={doSave}
-                > <span>{saving ? "Saving" : "Save"}{modified && "*"}</span></Button></div>
-        </div>
-        <div >
-            <div className="testing-editor-title">Comment</div>
-            <CommentEditor value={comment} onChange={setComment} />
-        </div>
+        }
 
         <div style={{ display: "flex", width: "100%", flexWrap: "wrap" }}>
-            <div style={{ width: "50%" }}>
+            <div style={{ width: props.disableAssert ? "100%" : "50%" }}>
                 <div className="testing-editor-title">Request</div>
                 <RequestEditor value={request} onChange={setRequest} />
             </div>
-
-            <div style={{ width: "49%", marginLeft: "4px" }}>
-                <div className="flex-center">
-                    <div className="testing-editor-title">Expect</div>
-                    <Checkbox label="Error" value={expectErr} onChange={setExpectErr} style={{ marginLeft: "12px", alignSelf: "end" }} />
+            {
+                !props.disableAssert && <div style={{ width: "49%", marginLeft: "4px" }}>
+                    <div className="flex-center">
+                        <div className="testing-editor-title">Expect</div>
+                        <Checkbox label="Error" value={expectErr} onChange={setExpectErr} style={{ marginLeft: "12px", alignSelf: "end" }} />
+                    </div>
+                    <ExpectEditor
+                        expectErr={expectErr}
+                        expectErrStr={expectErrStr}
+                        onChangeExpectErrStr={setExpectErrStr}
+                        expectResponse={expectResponse}
+                        onChangeExpectResponse={setExpectResponse}
+                    />
                 </div>
-                <ExpectEditor
-                    expectErr={expectErr}
-                    expectErrStr={expectErrStr}
-                    onChangeExpectErrStr={setExpectErrStr}
-                    expectResponse={expectResponse}
-                    onChangeExpectResponse={setExpectResponse}
-                />
-            </div>
+            }
         </div>
 
         {result &&
@@ -280,6 +279,22 @@ export default function (props: TestingEditorProps) {
     </div>
 }
 
+
+function getResultHint(resultStatus: ResultStatus) {
+    let color = ""
+    let title = ""
+    if (resultStatus === "fail") {
+        color = "red"
+        title = "FAIL"
+    } else if (resultStatus === "pass") {
+        color = "green"
+        title = "PASS"
+    } else if (resultStatus === "warning") {
+        color = "orange"
+        title = "WARN"
+    }
+    return { color, title }
+}
 interface CommentEditorProps {
     value?: string
     onChange?: (value: string) => void

@@ -1,15 +1,15 @@
 import { debounce } from "lodash";
 import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState } from "react";
 import { useCurrent } from "../../react-hooks";
-import { objectifyData, stringifyData, stringifyDataIndent } from "../../util/format";
+import { stringifyData, stringifyDataIndent } from "../../util/format";
 import { tryParse } from "../parse";
-import { buildJSONSchema, buildRespJSONSchemaMapping, MockData, MockInfo, MockItem, SchemaResult, serializeMockData, TestingCase, TestingRequestV2, TestingResponseV2 } from "../testing";
+import { MockData, MockInfo, SchemaResult, TestingCase, TestingRequestV2, TestingResponseV2, buildJSONSchema, buildRespJSONSchemaMapping, serializeMockData } from "../testing";
 import TestingEditor, { TestingCaseConfig, TestingCaseResult, TestingEditorControl } from "./TestingEditor";
 import MockEditor, { MockEditorControl } from "./TestingEditor/MockEditor";
 import "./TestingEditor/TestingEditor.css";
-import { ExtensionData, RootRecord } from "./TraceList/trace-types";
+import { ExtensionData } from "./TraceList/trace-types";
 import { MockType, TraceItem } from "./types";
-import { changeMockTypeWithItem, getMockItem, mockEditDataToMockItem, patchResponse, setList } from "./util"
+import { changeMockTypeWithItem, getMockItem, mockEditDataToMockItem, setList } from "./util";
 
 // TODO: 
 // 1.make api request local
@@ -41,6 +41,11 @@ export interface TestingExplorerEditorProps {
     caseName?: string
     caseData?: TestingCase
 
+    // function switches
+    disableName?: boolean
+    disableSave?: boolean
+    disableAssert?: boolean
+
     mockInfo?: MockInfo
 
     saveBeforeRequest?: boolean // default true
@@ -54,7 +59,7 @@ export interface TestingExplorerEditorProps {
     style?: CSSProperties;
 }
 
-export default function (props: TestingExplorerEditorProps) {
+export default function TestingExplorerEditor(props: TestingExplorerEditorProps) {
     const controllerRef = useRef<TestingEditorControl>()
 
     const [mockInfo, setMockInfo] = useState<MockInfo>()
@@ -247,6 +252,10 @@ export default function (props: TestingExplorerEditorProps) {
     }
 
     return <TestingEditor
+        disableName={props.disableName}
+        disableSave={props.disableSave}
+        disableAssert={props.disableAssert}
+
         config={config}
         result={result}
 

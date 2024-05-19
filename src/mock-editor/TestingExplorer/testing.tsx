@@ -23,8 +23,8 @@ export interface MockMapping<E> {
 }
 
 export interface MockData {
-    Mapping: MockMapping<MockItem>
-    MappingList: MockMapping<MockItem[]>
+    Mapping?: MockMapping<MockItem>
+    MappingList?: MockMapping<MockItem[]>
 }
 
 export function getRespStatus(resp: TestingResponseV2<any>): RunStatus {
@@ -119,30 +119,32 @@ export function getStatusMapping(status) {
 
 
 
-export interface TestingRequestV2 {
+export interface TestingRequestV2 extends TestingRequestBase {
     region: string
     env: string
 
-    request: string | Object
-
     // deprecated, use mockData
     mock: string | Object
-
-    mockData?: string | Object // for localhost, 
 
     service: string
     method: string
     endpoint: string
 
     assertIsErr?: boolean
-    assertError?: string
-    asserts?: string | Object
     assertMockRecord?: string | object
+}
+
+export interface TestingRequestBase {
+    request: string | Object
+    mockData?: string | Object //  // for localhost, 
+    mock?: string | Object // alias for mockData
+    asserts?: string | Object
+    assertError?: string
 }
 
 // copied
 export interface TestingResponseV2<T> {
-    Response: object
+    Response: string | object
     MockRecord: object
     Error?: string
     AssertResult?: AssertResult
@@ -182,8 +184,19 @@ export interface PkgRegistry {
     FuncMapping: { [ownerTypeName: string]: { [funcName: string]: FuncInfo } }
 }
 export interface FuncInfo {
+    Type: "func" | "var"
+    Name: string
+
+    File: string
+    Line: number // 1-based
+    PkgName: string
+    Owner: string
+    OwnerPtr: boolean
+
     Args: Field[]
     Results: Field[]
+    FirstArgIsCtx: boolean
+    LastResIsErr: boolean
 }
 export interface Field {
     Name: string
@@ -223,10 +236,6 @@ export interface SchemaResultV2 extends SchemaResult {
 
 export interface PkgRegistry2 {
     FuncMapping: { [ownerTypeName: string]: { [funcName: string]: FuncInfo } }
-}
-export interface FuncInfo {
-    Args: Field[]
-    Results: Field[]
 }
 
 // a list of schemas
@@ -397,4 +406,18 @@ export function createReplacer(prefix, real): (string) => string {
     return (s) => {
         return "" // no replace
     }
+}
+
+export function getFuncFullName(func: FuncInfo, opts?: { showPtr?: boolean }): string {
+    if (!func) {
+        return "?"
+    }
+    let prefix = ""
+    if (func.Owner !== "") {
+        if (func.OwnerPtr && opts?.showPtr) {
+            prefix = "*"
+        }
+        prefix += func.Owner + "."
+    }
+    return prefix + func.Name
 }

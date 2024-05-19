@@ -32,26 +32,27 @@ export const demoAPI: API = {
         })
     },
     requestTest: function <T>(req: TestingRequestV2): Promise<TestingResponseV2<T>> {
-        return axios({
-            url: testingURL,
-            method: "POST",
-            data: {
-                endpoint: "localhost:16000",
-                ...capObj(transObject(req)),
-            },
-        }).then(e => e.data).then((e: { data: TestingResponseV2<T>; code: number; msg: string; }) => {
-            if (e.code !== 0) {
-                return { Error: e.msg } as TestingResponseV2<T>;
-            }
-            // do some patch
-            return e.data;
-        }).catch(err => {
-            return { Error: err.message } as TestingResponseV2<T>;
-        });
-        // .then(e => e.data).catch(err => {
-        //     return { Error: err.message }
-        // })
+        return requestTest(req)
     },
+}
+
+export async function requestTest<T>(req: TestingRequestV2): Promise<TestingResponseV2<T>> {
+    return axios({
+        url: testingURL,
+        method: "POST",
+        data: {
+            endpoint: "localhost:16000",
+            ...capObj(transObject(req)),
+        },
+    }).then(e => e.data).then((e: { data: TestingResponseV2<T>; code: number; msg: string; }) => {
+        if (e.code !== 0) {
+            return { Error: e.msg } as TestingResponseV2<T>;
+        }
+        // do some patch
+        return e.data;
+    }).catch(err => {
+        return { Error: err.message } as TestingResponseV2<T>;
+    });
 }
 
 function capObj<T>(s: T): T {

@@ -4,10 +4,11 @@ import { CSSProperties, MutableRefObject, useEffect, useMemo, useRef, useState }
 import { VscCollapseAll } from "react-icons/vsc"
 import ExpandList, { ExpandItem, ItemController, useExpandListController } from "../../../ExpandList"
 import { ItemIndex } from "../../../List"
+import { useExpandSelect } from "../../../list/useExpandSelect"
 import { useCurrent } from "../../../react-hooks"
 import Checkbox from "../../../support/Checkbox"
+import { filter, map } from "../../../tree"
 import { CallRecord } from "./trace-types"
-import { filter, map, traverse } from "../../../tree"
 
 const errorColor = "#DA2829"  // red
 const panicColor = "#ffb500"  // orange-like
@@ -28,6 +29,7 @@ export interface CallRecordItem extends ExpandItem {
 
 export interface TraceListController {
     refreshMockProperty: () => void
+    selectFirst: () => void
 }
 export function useTraceListController(): MutableRefObject<TraceListController> {
     return useRef<TraceListController>()
@@ -37,6 +39,8 @@ export interface TraceListProps {
     records?: CallRecord[]
     className?: string
 
+
+    autoSelectFirst?: boolean
     // style for the root container
     style?: CSSProperties
 
@@ -116,18 +120,15 @@ export default function (props: TraceListProps) {
 
     // console.log("trace items after filtered:", versionRef.current, items)
 
-    interface ItemControllerExt extends ItemController<CallRecordItem> {
-        clear?: () => void
-    }
-    const [selectedController, setSelectedController] = useState<ItemControllerExt>()
+
 
     // clear selected if it disappear
     useEffect(() => {
-        if (!selectedController) {
+        if (!selectedContrlRef.current) {
             return
         }
         let itemList: CallRecordItem[] = items
-        for (const i of selectedController.index) {
+        for (const i of selectedContrlRef.current.index) {
             if (!(itemList.length > i)) {
                 setSelectedController(undefined)
                 return
@@ -136,16 +137,46 @@ export default function (props: TraceListProps) {
         }
     }, [items])
 
+    const { selectedController, setSelectedController, updateSelected } = useExpandSelect<CallRecordItem>({
+        onSelectChange(item, root, index) {
+            props.onSelectChange?.(item.record, root?.record, index)
+        },
+    })
+    const selectedContrlRef = useCurrent(selectedController)
+
+    const expandListController = useExpandListController<CallRecordItem>()
     const ref = useCurrent({ itemsVersion })
+
+    const selectFirst = () => {
+        const key = initItemsRef.current?.[0]?.key
+        const rootController = expandListController.current?.getController?.([key])
+        if (key && rootController) {
+            updateSelected(rootController.item, rootController)
+        }
+    }
+
     if (props.controllerRef) {
         props.controllerRef.current = {
             refreshMockProperty() {
                 setItemsVersion(ref.current.itemsVersion + 1)
             },
+            selectFirst,
         }
     }
 
-    const expandListController = useExpandListController<CallRecordItem>()
+    const propsRef = useCurrent(props)
+    const selectFirstRef = useCurrent(selectFirst)
+    useEffect(() => {
+        const props = propsRef.current
+        if (!props.autoSelectFirst) {
+            return
+        }
+        if (selectedContrlRef.current) {
+            return
+        }
+        selectFirstRef.current()
+    }, [items])
+
     // update selected status if source changed
     // const selectedControllerRef = useCurrent(selectedController)
     // useEffect(() => {
@@ -187,25 +218,11 @@ export default function (props: TraceListProps) {
                 item={item}
                 controller={controller}
                 onClick={() => {
-                    if (selectedController?.id === controller.id) {
-                        return
-                    }
-                    // clear prev
-                    if (selectedController) {
-                        selectedController.clear?.()
-                        selectedController.dispatchUpdate(item => ({ ...item, expandContainerStyle: { backgroundColor: undefined } }))
-                    }
-
-                    const clear = controller.subscribeUpdate((item) => {
-                        props.onSelectChange?.(item.record, controller.root?.record, controller.index)
-                    })
-
-                    setSelectedController({ ...controller, clear })
-                    controller?.dispatchUpdate?.(item => ({ ...item, expandContainerStyle: { backgroundColor: "#eeeeee" } }))
-
-                    props.onSelectChange?.(item.record, controller.root?.record, controller.index)
+                    updateSelected(item, controller)
                 }}
             />}
+            expandIconUseV1={true}
+            clickStyleUseV1={true}
         />
     </div>
 }

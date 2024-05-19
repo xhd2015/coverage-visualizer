@@ -1,13 +1,12 @@
 import { MutableRefObject, useEffect, useRef } from "react"
 
-const defaultBarColor = "#0000ff" // blue
+const default_bg_color = '#f0f0f0';
+const highlight_bg_color = '#868686';
+
 export interface ColResizeBarProps {
-    barColor?: string // defa
-
+    barColor?: string
     vertical?: boolean
-
     getTargetElement?: (bar: HTMLElement) => HTMLElement
-
     autoResize?: boolean // default true
     onPositionBegin?: (bar: HTMLElement, start: number) => void
     onPositionChange?: (bar: HTMLElement, to: number, from: number) => void
@@ -18,12 +17,10 @@ export default function ColResizeBar(props: ColResizeBarProps) {
     const divRef = useRef<HTMLDivElement>()
     const propsRef = useRef(props)
     useEffect(() => {
-        // console.log("attaching resize handler")
         const detach = attachResizeHandlers(divRef.current, propsRef)
         return detach
     }, [])
     return <div style={{
-        // backgroundColor: "red",
         position: "absolute",
         ...(props.vertical ? {
             cursor: 'row-resize',
@@ -37,7 +34,7 @@ export default function ColResizeBar(props: ColResizeBarProps) {
             top: 0,
             right: 0,
             height: "100%"
-        })
+        }),
     }}
         ref={divRef}
     ></div>
@@ -87,14 +84,10 @@ export function attachResizeHandlers(resizeBar: HTMLDivElement, propsRef: Mutabl
     let targetElement: HTMLElement;
     let watching
 
-
     const handler: Handler = propsRef.current.vertical ? verticalHandler : horizontalHandler
-
     const autoResize = () => propsRef.current?.autoResize !== false
 
     const onmousedown = function (e) {
-        // console.log("mousedown:", e, e.pageX)
-        // curCol = e.target.parentElement;
         watching = true
         pagePos = handler.getPos(e)
         propsRef.current?.onPositionBegin?.(e.target, pagePos)
@@ -103,18 +96,34 @@ export function attachResizeHandlers(resizeBar: HTMLDivElement, propsRef: Mutabl
             if (!targetElement) {
                 return
             }
-
             const padding = handler.getPadding(targetElement)
             // inner width(without padding) = offsetWidth - padding
             targetElementSize = handler.getSize(targetElement) - padding
         }
+
+        if (!watching) {
+            resizeBar.style.backgroundColor = default_bg_color;
+        } else {
+            resizeBar.style.backgroundColor = highlight_bg_color;
+        }
     }
+
     const onmouseover = function (e) {
-        e.target.style.borderRight = `2px solid ${propsRef.current?.barColor || defaultBarColor}`;
+        if (!watching) {
+            resizeBar.style.backgroundColor = default_bg_color;
+        } else {
+            resizeBar.style.backgroundColor = highlight_bg_color;
+        }
     }
+
     const onmouseout = function (e) {
-        e.target.style.borderRight = '';
+        if (watching) {
+
+        } else {
+            resizeBar.style.backgroundColor = default_bg_color;
+        }
     }
+
     const onmousemove = function (e) {
         if (!watching) {
             return
@@ -124,7 +133,6 @@ export function attachResizeHandlers(resizeBar: HTMLDivElement, propsRef: Mutabl
 
         if (autoResize() && targetElement) {
             const diff = handler.getPos(e) - pagePos
-
             // const padding = paddingDiff(monacoContainer);
             // const monacoContainerWidth = monacoContainer.offsetWidth - padding;
             const newSize = targetElementSize + diff
@@ -134,7 +142,10 @@ export function attachResizeHandlers(resizeBar: HTMLDivElement, propsRef: Mutabl
             }
         }
     }
+
     const onmouseup = function (e) {
+        resizeBar.style.backgroundColor = default_bg_color;
+
         if (!watching) {
             return
         }

@@ -18,23 +18,29 @@ import TextEditor from "../../../../TextEditor";
 import { SchemaResult } from "../../../testing";
 import { CallRecord } from "../../TraceList/trace-types";
 import { TraceItem, MockEditData, MockType, MockMode, RespEditorOption } from "../../types";
-import { prettyJSONObjectSafe } from "@fultonjs/common/lib/code"
+import { TraceEditor, TraceEditorControl } from "./TraceEditor";
 
-export interface TraceEditorControl {
-    layoutEditors: () => void
+export interface MockEditorControl {
     notifyMockChanged: () => void
+    notifyRespChanged: () => void
 }
 
-export interface TraceEditorProps {
+export interface MockEditorProps {
+    callRecords?: CallRecord[]
+
     getMock?: (item: TraceItem) => MockEditData | undefined
     onMockChange?: (item: TraceItem, mockData: MockEditData, prevMockData: MockEditData) => void
 
     mockType?: MockType
     onMockTypeChange?: (item: TraceItem, mockData: MockEditData, mockType: MockType, prevMockType: MockType, next: () => void) => void
 
+    onSelectChange?: (item: TraceItem) => void
+
+    checkNeedMock?: (e: CallRecord) => boolean
+
     respSchema?: SchemaResult
 
-    controlRef?: MutableRefObject<TraceEditorControl>
+    controlRef?: MutableRefObject<MockEditorControl>
 
 
     // the all mock info
@@ -55,26 +61,17 @@ export interface TraceEditorProps {
     style?: CSSProperties
     className?: string
 
-
-
     disableDebug?: boolean
     debugging?: boolean
     onClickDebug?: () => void
-
-    traceItem?: TraceItem
-
-    upperStyle?: CSSProperties
-    upperEditorStyle?: CSSProperties
-    bottomStyle?: CSSProperties
-    bottomEditorStyle?: CSSProperties
-
-    traceOnlyMode?: boolean
 }
 
-export function TraceEditor(props: TraceEditorProps) {
-    const selectedItem = props.traceItem
+export default function (props: MockEditorProps) {
+    const [selectedItem, setSelectedItem] = useState<TraceItem>()
     const selectedRecord = selectedItem?.item
 
+    // const [mockInJSON, setMockInJSON] = useState(0)
+    // console.log("mockInJSON init:", mockInJSON)
     const mockInJSON = props.mockInJSON
 
     const [mockData, setMockData] = useState<MockEditData>()
@@ -89,6 +86,8 @@ export function TraceEditor(props: TraceEditorProps) {
         setMockType(props.mockType)
     }, [props.mockType])
 
+    const onSelectChangeRef = useCurrent(props.onSelectChange)
+
     let traceMockMode: MockMode = "No Mock"
     if (selectedRecord?.mockStatus === "mock_error") {
         traceMockMode = "Mock Error"
@@ -96,349 +95,116 @@ export function TraceEditor(props: TraceEditorProps) {
         traceMockMode = "Mock Response"
     }
 
-    const getMockRef = useCurrent(props.getMock)
-
-    const updateStatusRef = useCurrent((selectedItem: TraceItem) => {
-        const record = getMockRef?.current?.(selectedItem)
-        setMockData(record)
-        setMockMode(record?.mockMode || "No Mock")
-        setMockResp(record?.mockResp)
-        setMockErr(record?.mockErr)
-    })
-
     useEffect(() => {
+        onSelectChangeRef.current?.(selectedItem)
         if (!selectedItem) {
             return
         }
-        updateStatusRef.current?.(selectedItem)
     }, [selectedItem])
 
-    const onMockChangeRef = useCurrent(props.onMockChange)
     const selectedItemRef = useCurrent(selectedItem)
-    const calcMockData = useMemo(() => ({ mockMode, mockResp, mockErr }), [mockMode, mockResp, mockErr])
-    const [prevMockData, setPrevMockData] = useState<MockEditData>()
-    useEffect(() => {
-        setPrevMockData(calcMockData)
-        if (onMockChangeRef.current && selectedItemRef.current) {
-            onMockChangeRef.current(selectedItemRef.current, calcMockData, prevMockData)
-        }
-    }, [calcMockData])
-    const calcMockDataRef = useCurrent(calcMockData)
 
-    const mockSetupEditorRef = useRef<editor.IStandaloneCodeEditor>()
-    const mockErrEditorRef = useRef<editor.IStandaloneCodeEditor>()
-    const reqEditorRef = useRef<editor.IStandaloneCodeEditor>()
-    const respEditorRef = useRef<editor.IStandaloneCodeEditor>()
+
+    // // update selected item's 
+    // useEffect(() => {
+    // }, [props.callRecords])
+
+    const checkNeedMockRef = useCurrent(props.checkNeedMock)
+    const traceListControllerRef = useTraceListController()
+    const traceEditorRef = useRef<TraceEditorControl>()
 
     if (props.controlRef) {
         props.controlRef.current = {
-            layoutEditors() {
-                // console.log("leftResize")
-                if (mockSetupEditorRef.current) {
-                    // console.log("layout mockResp")
-                    mockSetupEditorRef.current.layout()
-                }
-                if (reqEditorRef.current) {
-                    // console.log("layout trace")
-                    reqEditorRef.current.layout()
-                }
-                if (respEditorRef.current) {
-                    // console.log("layout trace")
-                    respEditorRef.current.layout()
-                }
-                if (mockErrEditorRef.current) {
-                    // console.log("layout mockErr")
-                    mockErrEditorRef.current.layout()
-                }
-            },
             notifyMockChanged() {
-                updateStatusRef.current?.(selectedItemRef.current)
+                traceEditorRef.current?.notifyMockChanged?.()
+            },
+            notifyRespChanged() {
+                traceListControllerRef.current?.refreshMockProperty?.()
             }
         }
     }
 
-    return <div>
-        <div style={{ /* height: "50%",  */display: "flex", flexDirection: "column", position: "relative", ...props.upperStyle }}>
-            <div style={{}}>
-                <div style={{ backgroundColor: "rgb(108 108 108)", color: "white" }}>{props.traceOnlyMode ? 'Request' : 'Set Mock'}</div>
-                <div style={{ marginLeft: "2px" }}>
-                    <span style={{ marginRight: "2px" }}><strong>Pkg:</strong></span>
-                    <span style={{ color: "#777777", userSelect: "text" }}>{selectedItem?.item?.pkg}</span>
-                </div>
-                <div style={{ marginLeft: "2px" }}>
-                    <span style={{ marginRight: "2px" }}><strong>Func:</strong></span>
-                    <span style={{ color: "#777777", userSelect: "text" }}>{selectedItem?.item?.func}</span>
-                    {selectedItem?.item?.func && <>
-                        <CopyClipboard text={selectedItem?.item?.func} />
-                        <CopyClipboard copyIcon={GoFileCode} copiedIcon={BsFileEarmarkCheck} text={selectedItem?.item?.file ? `${selectedItem?.item?.file}:${selectedItem?.item?.line}` : ''} />
-                    </>}
-                </div>
-                {!props.traceOnlyMode &&
-                    <div style={{ display: "flex", justifyContent: "space-evenly" }}>
-                        {
-                            !mockInJSON && <> <RadioGroup<MockMode>
-                                options={["Mock Response", "Mock Error", "No Mock"]}
-                                value={mockMode || "No Mock"}
-                                onChange={setMockMode}
-                            />
-                                <RenderMockType value={mockType} onChange={newMockType => {
-                                    if (selectedItemRef.current) {
-                                        props.onMockTypeChange?.(selectedItemRef.current, calcMockDataRef.current, newMockType, mockType, () => {
-                                            setMockType(newMockType)
-                                        })
-                                    }
-                                }} />
-                            </>
-                        }
-                        {
-                            mockInJSON && <div>Mock Editor</div>
-                        }
-                    </div>
-                }
-            </div>
-            {!props.traceOnlyMode &&
-                <div style={{ position: "relative", height: "fit-content" }}>
-                    {
-                        mockInJSON && <JSONEditorSchema
-                            style={{
-                                height: "200px"
-                            }}
-                            key="mockInJSON"
-                            value={props.allMock}
-                            // editorRef={allMockEditorRef}
-                            onChange={props.onAllMockChange}
-                            schema={props.mockSchema}
-                        />
+
+
+    return <LayoutLeftRight
+        rootStyle={{
+            display: "flex",
+            // height: "610px",
+            height: "fit-content",
+            minHeight: "400px",
+            // maxHeight: "610px",
+            userSelect: "none",
+            ...props.style
+            // justifyContent: 'center'
+        }}
+        watchRootResize
+        onLeftResize={() => {
+            traceEditorRef.current?.layoutEditors?.()
+        }}
+        leftHeightMatchRight
+        leftStyle={{ position: "relative" }}
+        leftChild={<>
+            <TraceList
+                style={{
+                    minWidth: "300px",
+                    // width: "250px",
+                    width: "fit-content",
+                    height: "100%",
+                    // override border
+                    // "border": undefined,
+                    "borderColor": "#b5b8bb",
+                    "borderRightWidth": "2px",
+                    "borderRightColor": "#b5b8bb",
+                    // overflowX: "hidden"
+                    overflowX: "auto"
+                }}
+                controllerRef={traceListControllerRef}
+                getMockProperty={e => {
+                    return {
+                        mocked: e.mockStatus === "mock_error" || e.mockStatus === "mock_resp",
+                        needMock: checkNeedMockRef.current?.(e),
                     }
-                    {
-                        !mockInJSON && <>
-                            {
-                                mockMode === "No Mock" && <div style={{ height: "200px" }}
-                                    key="noMock"></div>
-                            }
-                            {
-                                mockMode === "Mock Response" && <JSONEditorSchema
-                                    style={{
-                                        height: "200px"
-                                    }}
-                                    key="mockResponse"
-                                    value={mockResp}
-                                    editorRef={mockErrEditorRef}
-                                    onChange={value => {
-                                        setMockResp(value)
-                                    }}
-                                    schema={props.respSchema}
-                                />
-                            }
-                            {
-                                mockMode === "Mock Error" && <TextEditor
-                                    style={{
-                                        // TODO: here
-                                        //  when using flexGrow instead of height
-                                        //  the editor will flash on redraw, making it hard to use
-                                        // reproduce step: 1.comment flexGrow and comment height in and in the next Code element
-                                        //  2. select Mock to see the effect
-                                        //
-                                        // flexGrow: "1",
-                                        height: "200px"
-                                    }}
-                                    key="mockErr"
-                                    value={mockErr}
-                                    editorRef={mockSetupEditorRef}
-                                    onChange={value => {
-                                        setMockErr(value)
-                                    }}
-                                />
-                            }
-                        </>
-                    }
-                    {/* toolbar */}
-                    <div style={{ position: "absolute", top: "0", marginLeft: "2px" }}>
-                        <Icon
-                            icon={mockInJSON ? VscReply : VscJson}
-                            // icon={VscJson}
-                            key="A"
-                            rootStyle={{ "marginBottom": "2px" }}
-                            onClick={() => {
-                                // console.log("mockInJSON:", mockInJSON)
-                                props.onMockInJSONChange?.(mockInJSON)
-                            }} />
-                        <Icon
-                            key="B"
-                            icon={VscDebugAlt}
-                            rootStyle={{ "marginBottom": "2px" }}
-                            disabled={props.disableDebug}
-                            loading={props.debugging}
-                            onClick={() => {
-                                props.onClickDebug?.()
-                            }} />
-                    </div>
-
-                </div>
-            }
-            {props.traceOnlyMode && <RequestEditor hasRequest={!!selectedRecord} request={selectedRecord?.args} editorRef={reqEditorRef} style={props.upperEditorStyle} />
-            }
-        </div>
-
-        <div style={{/*  height: "50%", marginTop: "10px", */ display: "flex", flexDirection: "column", ...props.bottomStyle }}>
-            <div style={{ backgroundColor: "#74a99b", color: "white" }}>{props.traceOnlyMode ? 'Response' : 'Trace'}</div>
-            {!props.traceOnlyMode &&
-                <>
-                    <div style={{ paddingBottom: "2px" }}>
-                        <span style={{ fontWeight: "bold" }}>Status:</span> {
-                            (["Mock Response", "Mock Error", "No Mock"] as MockMode[]).map((e, i) => <span key={e}>{i > 0 && '|'}<span style={{ fontWeight: e === traceMockMode && "bold" }}>{e}</span></span>)
-                        }
-                    </div>
-                    <div style={{ display: "flex" }}>
-                        <RadioGroup<RespEditorOption>
-                            options={["Request", "Response"]}
-                            value={respMode}
-                            onChange={setRespMode}
-                        /></div>
-                    <RequestResponseEditor
-                        hasValue={!!selectedRecord}
-                        request={selectedRecord?.args}
-                        resp={respMode === "Response"}
-                        result={selectedRecord?.result}
-                        error={selectedRecord?.error}
-                        editorRef={respEditorRef}
-                    />
-                </>
-            }
-
-            {
-                props.traceOnlyMode && <ResponseEditor
-                    hasResponse={!!selectedRecord}
-                    result={selectedRecord?.result}
-                    error={selectedRecord?.error}
-                    editorRef={respEditorRef}
-                    style={props.bottomEditorStyle}
-                />
-            }
-        </div>
-    </div>
-}
-
-
-export interface RequestEditorProps {
-    style?: CSSProperties
-    request?: any
-    hasRequest?: boolean
-    editorRef?: MutableRefObject<editor.IStandaloneCodeEditor>
-}
-
-export function RequestEditor(props: RequestEditorProps) {
-    const { request, hasRequest } = props
-
-    const [traceContent, traceLang] = useMemo(() => {
-        let content: string = ""
-        let language
-        if (hasRequest) {
-            // NOTE: JSON.stringify(undefined) returns undefined
-            content = request !== undefined ? prettyJSONObjectSafe(request) : ""
-            language = "json"
+                }}
+                records={props.callRecords}
+                onSelectChange={(item, root, index) => {
+                    setSelectedItem({ item, root, index })
+                }}
+            />
+            <ColResizeBar
+                barColor="#dddd85" // yellow like
+                getTargetElement={e => {
+                    return e.parentElement.firstElementChild as HTMLElement
+                }} />
+        </>
         }
-        return [content, language]
-    }, [hasRequest, request])
-
-    return <JSONEditor
-        style={{
-            // flexGrow: "1",
-            height: "200px",
-            ...props.style,
+        rightStyle={{
+            // flexGrow: undefined
+            display: "flex",
+            flexDirection: "column"
         }}
-        editorRef={props.editorRef}
-        value={traceContent}
-        language={traceLang}
-        readonly={true}
-    />
-}
+        rightChild={<TraceEditor
+            controlRef={traceEditorRef}
 
-export interface ResponseEditorProps {
-    style?: CSSProperties
-    result?: any
-    error?: string
-    hasResponse?: boolean
-    editorRef?: MutableRefObject<editor.IStandaloneCodeEditor>
-}
+            traceItem={selectedItem}
 
-export function ResponseEditor(props: ResponseEditorProps) {
-    const { result, error, hasResponse } = props
+            getMock={props.getMock}
+            onMockChange={props.onMockChange}
 
-    const [traceContent, traceLang] = useMemo(() => {
-        let content: string = ""
-        let language
-        if (hasResponse) {
-            if (error) {
-                content = "Error: " + error
-                language = "plaintext"
-            } else {
-                // NOTE: undefined will return undefined, rather "null"
-                content = result !== undefined ? prettyJSONObjectSafe(result) : ""
-                language = "json"
-            }
-        }
-        return [content, language]
-    }, [hasResponse, error, result])
+            mockType={props.mockType}
+            onMockTypeChange={props.onMockTypeChange}
+            respSchema={props.respSchema}
 
-    return <JSONEditor
-        style={{
-            // flexGrow: "1"
-            height: "200px",
-            ...props.style,
-        }}
+            allMock={props.allMock}
+            onAllMockChange={props.onAllMockChange}
+            mockSchema={props.mockSchema}
 
-        editorRef={props.editorRef}
-        value={traceContent}
-        language={traceLang}
-        readonly={true}
-    />
-}
+            mockInJSON={props.mockInJSON}
+            onMockInJSONChange={props.onMockInJSONChange}
 
-export interface RequestResponseEditorProps {
-    hasValue?: boolean
-
-    resp?: boolean
-
-    request?: any
-    result?: any
-    error?: string
-    editorRef?: MutableRefObject<editor.IStandaloneCodeEditor>
-}
-
-export function RequestResponseEditor(props: RequestResponseEditorProps) {
-    const [traceContent, traceLang] = useMemo(() => {
-        let content: string = ""
-        let language
-        if (props.hasValue) {
-            if (props.resp) {
-                if (props.error) {
-                    content = "Error: " + props.error
-                    language = "plaintext"
-                } else {
-                    // NOTE: undefined will return undefined, rather "null"
-                    content = props?.result !== undefined ? prettyJSONObjectSafe(props?.result) : ""
-                    language = "json"
-                }
-            } else {
-                // NOTE: JSON.stringify(undefined) returns undefined
-                content = props?.request !== undefined ? prettyJSONObjectSafe(props?.request) : ""
-                language = "json"
-            }
-        }
-        return [content, language]
-    }, [props.hasValue, props.resp, props.request, props.error, props.result])
-
-    return <JSONEditor
-        style={{
-            // flexGrow: "1"
-            height: "200px"
-        }}
-
-        editorRef={props.editorRef}
-        value={traceContent}
-        language={traceLang}
-        readonly={true}
+            disableDebug={props.disableDebug}
+            debugging={props.debugging}
+            onClickDebug={props.onClickDebug}
+        />}
     />
 }
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { TestingAPI } from ".";
+import TestingList, { TestingAPI } from "./index";
 import { ItemPath } from "../../List";
 import { RunStatus } from "../testing";
 import { TestingItem } from "../testing-api";

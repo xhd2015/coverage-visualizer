@@ -1,16 +1,17 @@
 import axios from "axios";
-import React, { CSSProperties, useEffect, useState } from "react";
-import { getRespStatus, MockInfo, RunStatus, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
+import { CSSProperties, useEffect, useState } from "react";
+import { getRespStatus, MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing";
 import { AddCaseRequest, addDir, buildTestingItemV2, DeleteCaseRequest, deleteDir, ListCaseResp, renameDir, TestingItem } from "./testing-api";
-import { ExtensionData, useTestingExplorerEditorController } from "./TestingExplorerEditor";
+import { useTestingExplorerEditorController } from "./TestingExplorerEditor";
 import { demoAPI as listDemoAPI } from "./TestingList/TestingListDemo";
 
+import TestingExplorer from ".";
 import { useCurrent } from "../react-hooks";
 import { stringifyData } from "../util/format";
 import { demoAPI } from "./TestingExplorerEditor/TestingExplorerEditorDemo";
-import { Options } from "./TestingList";
-import TestingExplorer from ".";
 import { patchResponse } from "./TestingExplorerEditor/util";
+import { Options } from "./TestingList";
+import { ExtensionData } from "./TestingExplorerEditor/TraceList/trace-types";
 
 const listCaseURL = 'http://localhost:16000/api/case/listAll?noCaseList=true'
 const updateSummaryURL = 'http://localhost:16000/api/summary/update'
@@ -21,54 +22,66 @@ export interface TestingExplorerDemoProps {
     topElement?: any
 }
 
-export default function (props: TestingExplorerDemoProps) {
+export default function TestingExplorerDemo(props: TestingExplorerDemoProps) {
     const editorControllerRef = useTestingExplorerEditorController()
     const [testingItems, setTestingItems] = useState<TestingItem[]>()
 
-    const refresh = async () => {
+    type ItemBundle = {
+        item?: TestingItem,
+        version?: number,
+        clearResponse?: boolean // clear response before action
+        action?: (caseData: TestingCase) => void
+    }
+    const [itemBundle, setItemBundle] = useState<ItemBundle>({ version: 0 } as ItemBundle)
+
+    const refreshTreeList = async () => {
         const e = await axios({ url: listCaseURL, method: "GET" })
         const resp: ListCaseResp = e.data?.data
         const item = buildTestingItemV2(resp.root)
         setTestingItems(item ? [item] : [])
     }
     useEffect(() => {
-        refresh()
+        refreshTreeList()
     }, [])
 
     // const [curItem, setItem] = useState<TestingItem>()
-
-    type ItemBundle = {
-        item: TestingItem,
-        action?: (caseData: TestingCase) => void
-    }
-    const [itemBundle, setItemBundle] = useState<ItemBundle>()
 
     const [mockInfo, setMockInfo] = useState<MockInfo>()
     const [caseData, setCaseData] = useState<TestingCase>()
 
     const curItem = itemBundle?.item
 
+    const caseDataRef = useCurrent(caseData)
+
     // get the case
     // ping localhost:16000 first
     const curItemRef = useCurrent(curItem)
-    const reloadItem = async (curItem: TestingItem, action: (caseData: TestingCase) => void) => {
+    const reloadItem = async (curItem: TestingItem, action: (caseData: TestingCase) => void, clearResponse: boolean) => {
         // console.log("reload case:", curItem)
         let caseData: TestingCase
         if (curItem?.kind === "case") {
             caseData = await demoAPI.loadCase(curItem.method as string, curItem.path as string, curItem.id as number)
         }
-        editorControllerRef.current?.clearResponse?.()
+        if (clearResponse) {
+            editorControllerRef.current?.clearResponse?.()
+        }
         setCaseData(caseData)
         action?.(caseData)
         return caseData
     }
 
+    // refresh the data, without clear response
+    const refreshItemData = () => {
+        setItemBundle(v => ({ ...v, version: v.version + 1, clearResponse: false }))
+    }
+
+
     useEffect(() => {
         // console.log("reload case onChange:", itemBundle?.item)
-        reloadItem(itemBundle?.item, itemBundle?.action)
+        reloadItem(itemBundle?.item, itemBundle?.action, itemBundle?.clearResponse)
     },
         // destruct basic data so change won't load twice
-        [itemBundle?.item?.kind, itemBundle?.item?.method, itemBundle?.item?.path, itemBundle?.item?.id]
+        [itemBundle?.item?.kind, itemBundle?.item?.method, itemBundle?.item?.path, itemBundle?.item?.id, itemBundle?.clearResponse, itemBundle.version]
     )
 
     useEffect(() => {
@@ -93,7 +106,12 @@ export default function (props: TestingExplorerDemoProps) {
             listProps={{
                 data: testingItems,
                 onTreeChangeRequested() {
-                    refresh()
+                    refreshTreeList()
+                    refreshItemData()
+                },
+                onRefreshRoot() {
+                    refreshTreeList()
+                    refreshItemData()
                 },
                 style: {
                     // width: "400px",
@@ -104,8 +122,9 @@ export default function (props: TestingExplorerDemoProps) {
                 },
                 async onClickCaseRun(item, root, index, update) {
                     // console.log("reload case onClick:", item)
-                    setItemBundle({
+                    setItemBundle(v => ({
                         item,
+                        clearResponse: true,
                         action: async (caseData: TestingCase) => {
                             // avoid loading items twice
                             const resp = await editorControllerRef.current?.request?.(caseData)
@@ -115,7 +134,7 @@ export default function (props: TestingExplorerDemoProps) {
                                 status: status,
                             }))
                         }
-                    })
+                    }))
                     // console.log("clickCaseRun:", item)
                 },
 
@@ -167,7 +186,7 @@ export default function (props: TestingExplorerDemoProps) {
                             id: id + 1,
                             dir: item.path as string,
                             name: `${item.name} Copy`,
-                            data: { ...caseData },
+                            data: { ...caseDataRef.current },
                         }
                         await axios({
                             url: "http://localhost:16000/api/case/add",
@@ -236,7 +255,7 @@ export default function (props: TestingExplorerDemoProps) {
                 },
                 onSelectChange(item, root, index) {
                     // console.log("onSelectChange:", item)
-                    setItemBundle({ item })
+                    setItemBundle(v => ({ item, clearResponse: true }))
                     // setItem(item)
                 },
             }}
@@ -249,7 +268,8 @@ export default function (props: TestingExplorerDemoProps) {
                 async save(caseName, caseData: TestingCase) {
                     if (curItemRef.current?.kind === "case") {
                         await demoAPI.saveCase(curItemRef?.current?.method as string, curItemRef?.current?.path as string, curItemRef.current?.id as number, caseName, caseData).finally(() => {
-                            refresh()
+                            refreshTreeList()
+                            refreshItemData()
                         })
                         return
                     } else {
@@ -257,21 +277,25 @@ export default function (props: TestingExplorerDemoProps) {
                             curItemRef?.current?.path as string,
                             curItemRef.current?.name as string,
                             caseName,
-                        ).then(() => refresh())
+                        ).then(() => refreshTreeList())
                     }
                 },
                 async request(req: TestingRequestV2) {
                     if (!curItem?.method) {
                         return undefined
                     }
-                    const data: TestingResponseV2<ExtensionData> = await demoAPI.requestTest({ ...req, method: curItem.method }).catch(e => {
-                        return { Error: e.message } as TestingResponseV2<ExtensionData>
-                    }) as TestingResponseV2<ExtensionData>
-                    return patchResponse(data)
+                    return await requestAndPatch({ ...req, method: curItem.method })
                 },
             }}
         />
     </div>
+}
+
+export async function requestAndPatch(req: TestingRequestV2) {
+    const data: TestingResponseV2<ExtensionData> = await demoAPI.requestTest(req).catch(e => {
+        return { Error: e.message } as TestingResponseV2<ExtensionData>
+    }) as TestingResponseV2<ExtensionData>
+    return patchResponse(data)
 }
 
 function maxID(children?: TestingItem[]): number {
