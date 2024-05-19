@@ -1,0 +1,233 @@
+/* important: as sometimes body's overflow is default to hidden, making the website hard to expand */
+body {
+    overflow: scroll;
+}
+
+.z-index-1000 {
+    z-index: 1000;
+}
+
+.background-white {
+    background-color: white;
+}
+
+.background-black {
+    background-color: black;
+}
+
+.arrow:before {
+    content: '→';
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.5);
+}
+
+.child-space-5>* {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.child-margin-x-1>* {
+    margin-left: 1px;
+    margin-right: 1px;
+}
+
+.child-margin-x-1:first-child {
+    margin-left: 0px;
+}
+
+.child-margin-x-2>* {
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.child-margin-x-2:first-child {
+    margin-left: 0px;
+}
+
+.child-margin-x-3>* {
+    margin-left: 3px;
+    margin-right: 3px;
+}
+
+.child-margin-x-3:first-child {
+    margin-left: 0px;
+}
+
+.child-margin-x-4>* {
+    margin-left: 4px;
+    margin-right: 4px;
+}
+
+.child-margin-x-4:first-child {
+    margin-left: 0px;
+}
+
+
+.child-margin-x-5>* {
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+.child-margin-x-5:first-child {
+    margin-left: 0px;
+}
+
+.child-margin-x-8>* {
+    margin-left: 8px;
+    margin-right: 8px;
+}
+
+.child-margin-x-8:first-child {
+    margin-left: 0px;
+}
+
+.child-margin-x-10>* {
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.child-margin-x-10>*:first-child {
+    margin-left: 0px;
+}
+
+.margin-y-5 {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+
+.child-margin-y-2>* {
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+
+.child-margin-y-2>*:first-child {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.child-margin-y-5>* {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+.child-margin-y-5>*:first-child {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.child-margin-y-20>* {
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+.child-margin-y-20>*:first-child {
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+
+.flex {
+    display: flex;
+}
+
+.width-full {
+    width: 100%;
+}
+
+a.no-link {
+    color: unset;
+    text-decoration: unset;
+}
+
+.report-detail .code-stl {
+    font-size: 16px;
+}
+
+.report-detail .ant-page-header-heading {
+    display: none;
+}
+
+.ant-pro-page-container .ant-pro-page-container-warp-page-header,
+.ant-pro-page-container-children-content {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+}
+
+.report-detail-form .ant-pro-card-body {
+    padding-top: 8px;
+}
+
+.report-detail .node-render:hover {
+    background-color: #f5f5f5;
+}
+
+.code-view-container .ant-pro-card-body {
+    padding-right: 16px;
+}
+
+.file-row-render {
+    flex: 1;
+    justify-content: space-between;
+}
+
+.code-box-bar .ant-select-arrow {
+    right: 6px !important;
+}
+
+.code-box-bar .ant-select-selection-item {
+    padding-right: 14px !important;
+}
+
+.code-box-bar .ant-select-selector {
+    padding-left: 8px !important;
+    padding-right: 6px !important;
+}
+
+.current-click-node {
+    background-color: #cbd0eb;
+}
+
+.cover-mode-select-row {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f5f5f5;
+    padding-left: 12px;
+}
+
+.cover-mode-select-row .label {
+    margin-right: 10px !important;
+}
+
+.cover-mode-select-row .ant-select-selector {
+    padding: 0 !important;
+}
+
+.cover-mode-select-row .ant-select-selection-item {
+    padding-right: 30px !important;
+}
+
+.cover-mode-select-row .ant-btn-link {
+    padding-right: 0 !important;
+}
+
+
+.ant-pro-layout .ant-pro-sider-footer {
+    animation-timing-function: unset;
+    animation-name: unset;
+    animation-duration: unset;
+}
+
+.color-grey {
+    color: rgb(102, 102, 102);
+}
+
+.ant-pro-base-menu-item-icon {
+    display: flex;
+    margin-top: -3px;
+}
+
+.ant-pro-table-list-toolbar-setting-item>span {
+    display: flex;
+}

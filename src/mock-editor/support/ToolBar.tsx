@@ -5,7 +5,7 @@ import { searchFileOrDirPlaceholder, toolBarExpand1, toolBarExpand2, toolBarExpa
 
 export interface ToolBarProps {
   onToggleExpand?: (depth: number) => void;
-  searchFile: (content: string) => void;
+  searchFile?: (content: string) => void;
   extra?: any;
 }
 

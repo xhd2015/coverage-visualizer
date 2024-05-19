@@ -75,6 +75,7 @@ export interface MethodCase {
     name: string
 }
 
+// NOTE: case can have sub childrens
 export type TestingItemType = "dir" | "testSite" | "case"
 
 export interface TestingItem {

@@ -12,6 +12,10 @@
             "node_modules/@types",
             "./types"
         ],
+        "lib": [
+            "ES2018",
+            "DOM",
+        ],
         "emitDeclarationOnly": true,
         "allowSyntheticDefaultImports": true
     },

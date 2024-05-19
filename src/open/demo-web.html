@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="/build/open-web.js"></script>
+    <script>
+        const {renderReact,HelloWorld} = Open
+
+        // create element using react
+        window.onload = function(){
+            // must run after document loaded 
+            const root = document.getElementById("root")
+            renderReact(root,HelloWorld)
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

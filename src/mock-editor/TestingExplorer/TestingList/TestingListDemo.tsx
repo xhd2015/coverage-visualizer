@@ -1,5 +1,5 @@
 import React from "react";
-import TestingList, { TestingAPI } from "./index";
+import { TestingList, Options, TestingAPI } from "./index";
 import { ItemPath } from "../../List";
 import { RunStatus } from "../testing";
 import { TestingItem } from "../testing-api";
@@ -10,19 +10,25 @@ function randList<T>(list: T[]): T {
 }
 
 export const demoAPI: TestingAPI = {
-    delete: function (item: TestingItem, path: ItemPath): Promise<void> {
+    delete: function (item: TestingItem, opts: Options): Promise<void> {
         throw new Error("Function not implemented.");
     },
-    run: function (item: TestingItem, path: ItemPath): Promise<RunStatus> {
+    run: function (item: TestingItem, opts: Options): Promise<RunStatus> {
         // the API can be designed to have rate limit
         return new Promise((resolve) => {
             setTimeout(() => resolve(randList(["success", /* "fail", "error", "skip" */] as RunStatus[])), (1 + Math.random() * 3) * 1000)
         })
     },
-    duplicate: function (item: TestingItem, path: ItemPath): Promise<void> {
+    duplicate: function (item: TestingItem, opts: Options): Promise<void> {
         throw new Error("Function not implemented.");
     },
-    add: async function (item: TestingItem, path: ItemPath): Promise<void> {
+    add: async function (item: TestingItem, opts: Options): Promise<void> {
+
+    },
+    addFolder: async function (item: TestingItem, opts: Options): Promise<void> {
+
+    },
+    delFolder: async function (item: TestingItem, opts: Options): Promise<void> {
 
     }
 }
@@ -38,6 +44,7 @@ function newArray(n) {
 export default function () {
     return <TestingList
         data={demoData}
+        showEditActions={false}
         style={{
             width: "400px",
             minHeight: "600px",
@@ -67,6 +74,10 @@ export const demoData: TestingItem[] = [
                             {
                                 name: "WhatInterface to test?",
                                 kind: "case",
+                                children: [{
+                                    name: "sub_case",
+                                    kind: "case",
+                                }]
                             },
                             ...newArray(25).map((e, i): TestingItem => ({
                                 name: `Test_${i}`,

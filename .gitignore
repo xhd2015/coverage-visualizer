@@ -10,3 +10,6 @@ gitlab-ui
 /src/demo.html
 
 /npm-publish
+
+/src/open/build
+/src/open/npm-publish

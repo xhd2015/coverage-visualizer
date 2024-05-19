@@ -112,3 +112,7 @@ Check [documentation](./doc/) for more details.
 # Work in progress
 
 Work still in progress, currently the default golang coverage visualizer is implemented.
+
+# Code Guidelines
+1. no default export
+2. prefer verbose syntax instead of one-liner code

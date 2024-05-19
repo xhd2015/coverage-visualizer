@@ -1,5 +1,5 @@
 
-import { createElement, CSSProperties, FunctionComponent, useEffect, useMemo, useRef, useState } from "react"
+import { createElement, CSSProperties, FunctionComponent, ReactElement, useEffect, useMemo, useRef, useState } from "react"
 import { AiOutlineCheckCircle, AiOutlineClockCircle, AiOutlineCloseCircle, AiOutlineExclamationCircle, AiOutlineMinusCircle, AiOutlinePlus } from "react-icons/ai"
 import { BsCircle } from "react-icons/bs"
 import { VscNewFolder, VscRefresh } from "react-icons/vsc"
@@ -8,7 +8,7 @@ import { MdContentCopy } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
 import { VscPlay } from "react-icons/vsc"
 
-import ExpandList, { ExpandItem, ItemController, useExpandListController, useSelect } from "../../ExpandList"
+import ExpandList, { ExpandItem, ExpandListController, ItemController, useExpandListController, useSelect } from "../../ExpandList"
 import { ItemIndex, ItemPath } from "../../List"
 import { useCurrent } from "../../react-hooks"
 import ToolBar from "../../support/ToolBar"
@@ -45,6 +45,12 @@ interface TestingStatItem extends ExpandItem {
     children?: TestingStatItem[]
 }
 
+export interface MockProperty {
+    needMock?: boolean
+    mocked?: boolean
+}
+export type MockPropertyGetter = (e: TestingItem) => MockProperty
+
 export interface TestingListProps {
     data?: TestingItem[]
     className?: string
@@ -52,9 +58,12 @@ export interface TestingListProps {
     api?: TestingAPI
     runLimit?: number // concurrent number to call run
 
+    // default show
+    showEditActions?: boolean
+
     // style for the root container
     style?: CSSProperties
-    getMockProperty?: (e: TestingItem) => { needMock?: boolean, mocked?: boolean },
+    getMockProperty?: MockPropertyGetter
     onSelectChange?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
 
     onAllRan?: (counters?: StateCounters) => void
@@ -67,7 +76,7 @@ export interface TestingListProps {
     checkBeforeSwitch?: (action: () => Promise<void>) => void
 }
 
-export default function (props: TestingListProps) {
+export function TestingList(props: TestingListProps) {
     // filters
     const [showFailOnly, setShowFailOnly] = useState(false)
     const [showSkipOnly, setShowSkipOnly] = useState(false)
@@ -81,73 +90,9 @@ export default function (props: TestingListProps) {
     const expandListController = useExpandListController<TestingStatItem>()
 
     // id is stable
-    const initItems = useMemo(() => {
-        // let id = 1
-        const items = map<TestingItem, TestingStatItem>(props.data, (e, children, idx, itemPath: string[]): TestingStatItem => {
-            // merge with previous status
-            return {
-                record: e,
-                children,
-                leaf: !e.children?.length,
-                counters: {} as StateCounters,
-                key: `${e.name}_${idx}`,
-                ...getMockPropertyRef?.current?.(e),
-                itemStyle: {
-                    userSelect: "text"
-                }
-            }
-        })
-        traverse(items, (e) => {
-        }, {
-            after(e, ctx, parentCtx, idx, path) {
-                if (e.record.kind === "case") {
-                    const prev = expandListController.current?.getState?.(path)
-                    // console.log("prev:", path, prev)
-                    e.counters = prev?.counters || { "not_run": 1 }
-                    return
-                }
-                [e.counters] = mergeChildrenCounters(e.children, child => child.counters)
-            },
-        })
-        // console.log("items:", items)
-        return items
-    }, [props.data])
-
-    const [items, setItems] = useState(initItems)
-    const initItemsRef = useCurrent(initItems)
+    const items = useMemo(() => buildAndFilterItems(props.data, expandListController.current, getMockPropertyRef.current, showFailOnly, showSkipOnly, (path) => expandListController.current?.getState?.(path)), [props.data, showFailOnly, showSkipOnly])
 
     const toggleExpandRef = useRef<() => void>()
-
-    useEffect(() => {
-        if (!showFailOnly && !showSkipOnly) {
-            setItems(initItemsRef.current)
-            return
-        }
-        let filterItems = filter<TestingStatItem, TestingStatItem>(initItemsRef.current, (e, path) => {
-            const state = expandListController.current?.getState?.(path)
-            if (showFailOnly && state && (state.status === "error" || state.status === "fail")) {
-                return true
-            }
-            if (showSkipOnly && state && (state.status === "skip")) {
-                return true
-            }
-            // if (showErrOnly && (e.record?.error || e.record?.panic)) {
-            //     return true
-            // }
-            // if (showMockOnly && e.needMock) {
-            //     return true
-            // }
-            return false
-        })
-
-        // // update leaf based on children
-        // filter<TestingStatItem, TestingStatItem>(filterItems, e => {
-        //     e.leaf = !e.children?.length
-        //     // e.key = e.key + `_${versionRef.current}`
-        //     return true
-        // })
-        setItems(filterItems)
-    }, [initItems, showFailOnly, showSkipOnly])
 
     // console.log("trace items after filtered:", versionRef.current, items)
     const { selectedController, setSelectedController, getSelectAction } = useSelect<TestingStatItem>({
@@ -187,61 +132,101 @@ export default function (props: TestingListProps) {
             return
         }
 
+        if (treatLikeFolder(item)) {
+            runFolder(item, controller, runItem, path, expandListController.current, notifyUpdate)
+        }
         if (item.record?.kind === "case") {
-            controller.dispatchUpdate(item => ({ ...item, status: "running", counters: { running: 1 } }))
-            notifyUpdate()
+            await runCase(item, controller, runLimitedRef.current, notifyUpdate)
+        }
+    }
+    const clickItem = (item: TestingStatItem, controller: ItemController<TestingStatItem>) => {
+        const action = getSelectAction(item, controller)
+        if (!action) {
+            return
+        }
+        if (!props.checkBeforeSwitch) {
+            action()
+            return
+        }
+        props.checkBeforeSwitch(action)
+    }
 
-            await runLimitedRef.current(item.record, { parent: controller.parent?.item?.record, path: controller.path }).then((finalStatus) => {
-                controller.dispatchUpdate(item => ({ ...item, status: finalStatus, counters: { [finalStatus]: 1 } }))
-            }).catch((e) => {
-                controller.dispatchUpdate(item => ({ ...item, status: "error", counters: { "error": 1 } }))
-            })
-            notifyUpdate()
-        } else {
-            // reset all counters
-            item.counters = {} as StateCounters
-            if (!item.children?.length) {
-                // nothing to run
-                controller.dispatchUpdate(e => ({ ...e, status: "success", counters: item.counters }))
-                notifyUpdate()
-                return
-            }
-            controller.dispatchUpdate(e => ({ ...e, status: "running", counters: item.counters }))
-            item.status = "running"
-
-            // traverse all children, and make them run
-            item.children?.forEach?.(child => {
-                runItem(child, [...path, child.key], () => {
-                    controller.dispatchUpdate(e => {
-                        // range all children to get an up to date counters
-                        const [newCounters, total] = mergeChildrenCounters(item.children, (chld) => expandListController.current.getState([...path, chld.key]).counters)
-                        let itemStatus: RunStatus = "success"
-                        if (newCounters["running"]) {
-                            itemStatus = "running"
-                        } else if (newCounters["error"]) {
-                            itemStatus = "error"
-                        } else if (newCounters["fail"]) {
-                            itemStatus = "fail"
-                        } else if (newCounters["skip"] === total) {
-                            itemStatus = "skip"
-                        } else if (newCounters["not_run"] === total) {
-                            itemStatus = "not_run"
-                        }
-
-                        return {
-                            ...e,
-                            status: itemStatus,
-                            counters: newCounters,
-                        }
-                    })
-
-                    notifyUpdate()
-                }).catch((e) => {
-                    console.error("update error:", e)
-                    notifyUpdate()
-                })
+    const clickRun = (item: TestingStatItem, controller: ItemController<TestingStatItem>) => {
+        const runAction = () => {
+            const isRoot = controller.path?.length <= 1
+            let needSave = isRoot
+            // console.log("DEBUG run:", controller.path, isRoot)
+            // if (true) {
+            //     return
+            // }
+            runItem(item, controller.path, () => {
+                // get the update-to-date item
+                const item = controller.item
+                if (!needSave) {
+                    return
+                }
+                if (!isRoot) {
+                    return
+                }
+                // debug
+                // if (item.key === "/_0") {
+                //     console.log("item update:", controller.item)
+                // }
+                // root
+                if (item.status === 'running' || item.status === 'not_run') {
+                    return
+                }
+                needSave = false
+                props.onAllRan?.(item.counters as StateCounters)
             })
         }
+        // if non-case, don't switch to it
+        if (item.record?.kind !== "case") {
+            runAction()
+            return
+        }
+
+        // for case, switch to it, and use the 'request' button
+        // on the interface
+        //
+        if (props.onClickCaseRun) {
+            // switch to the case
+            const switchAction = getSelectAction(item, controller)
+            const update = (fn: (item: TestingStatItem) => TestingStatItem) => {
+                controller.dispatchUpdate(fn)
+            }
+            if (!switchAction) {
+                props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update)
+                return
+            }
+            const action = () => switchAction().then(() => props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update))
+            if (!props.checkBeforeSwitch) {
+                action()
+                return
+            }
+            props.checkBeforeSwitch(action)
+            return
+        }
+
+        runAction()
+
+        // for case, switch to it, and use the 'request' button
+        // on the interface
+        //
+        // const selectAction = getSelectAction(item, controller)
+        // const action = async () => {
+        //     await selectAction?.()
+        //     if (props.onClickCaseRun) {
+        //         props.onClickCaseRun()
+        //     } else {
+        //         runAction()
+        //     }
+        // }
+        // if (!props.checkBeforeSwitch) {
+        //     action()
+        //     return
+        // }
+        // props.checkBeforeSwitch(action)
     }
 
     // console.log("final items:", items)
@@ -254,12 +239,14 @@ export default function (props: TestingListProps) {
     }}
         className={props.className}
     >
-        <ToolBar onToggleExpand={() => toggleExpandRef.current?.()}
+        <ToolBar
+            onToggleExpand={() => toggleExpandRef.current?.()}
             extra={<>
                 <Checkbox label="Fail" value={showFailOnly} onChange={setShowFailOnly} style={{ marginLeft: "4px" }} />
                 <Checkbox label="Skip" value={showSkipOnly} onChange={setShowSkipOnly} style={{ marginLeft: "4px" }} />
             </>}
         />
+
         <ExpandList<TestingStatItem>
             items={items}
             mergeStatus={(item, prevItem) => ({
@@ -280,103 +267,76 @@ export default function (props: TestingListProps) {
                 item={item}
                 controller={controller}
                 api={props.api}
+                showEditActions={props.showEditActions}
                 showMenu={selectedController?.id === controller.id || controller.path.length <= 1} // root or selected
                 isRoot={controller.path.length <= 1}
                 onTreeChangeRequested={props.onTreeChangeRequested}
-                onClick={() => {
-                    const action = getSelectAction(item, controller)
-                    if (!action) {
-                        return
-                    }
-                    if (!props.checkBeforeSwitch) {
-                        action()
-                        return
-                    }
-                    props.checkBeforeSwitch(action)
-                }}
-                onClickRun={() => {
-                    const runAction = () => {
-                        const isRoot = controller.path?.length <= 1
-                        let needSave = isRoot
-                        // console.log("DEBUG run:", controller.path, isRoot)
-                        // if (true) {
-                        //     return
-                        // }
-                        runItem(item, controller.path, () => {
-                            // get the update-to-date item
-                            const item = controller.item
-                            if (!needSave) {
-                                return
-                            }
-                            if (!isRoot) {
-                                return
-                            }
-                            // debug
-                            // if (item.key === "/_0") {
-                            //     console.log("item update:", controller.item)
-                            // }
-                            // root
-                            if (item.status === 'running' || item.status === 'not_run') {
-                                return
-                            }
-                            needSave = false
-                            props.onAllRan?.(item.counters as StateCounters)
-                        })
-                    }
-                    // if non-case, don't switch to it
-                    if (item.record?.kind !== "case") {
-                        runAction()
-                        return
-                    }
-
-                    // for case, switch to it, and use the 'request' button
-                    // on the interface
-                    //
-                    if (props.onClickCaseRun) {
-                        // switch to the case
-                        const switchAction = getSelectAction(item, controller)
-                        const update = (fn: (item: TestingStatItem) => TestingStatItem) => {
-                            controller.dispatchUpdate(fn)
-                        }
-                        if (!switchAction) {
-                            props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update)
-                            return
-                        }
-                        const action = () => switchAction().then(() => props.onClickCaseRun(item?.record, controller?.root?.record, controller?.index, update))
-                        if (!props.checkBeforeSwitch) {
-                            action()
-                            return
-                        }
-                        props.checkBeforeSwitch(action)
-                        return
-                    }
-
-                    runAction()
-
-                    // for case, switch to it, and use the 'request' button
-                    // on the interface
-                    //
-                    // const selectAction = getSelectAction(item, controller)
-                    // const action = async () => {
-                    //     await selectAction?.()
-                    //     if (props.onClickCaseRun) {
-                    //         props.onClickCaseRun()
-                    //     } else {
-                    //         runAction()
-                    //     }
-                    // }
-                    // if (!props.checkBeforeSwitch) {
-                    //     action()
-                    //     return
-                    // }
-                    // props.checkBeforeSwitch(action)
-                }}
+                onClick={() => clickItem(item, controller)}
+                onClickRun={() => clickRun(item, controller)}
                 onRefreshRoot={props.onRefreshRoot}
-
             />}
         />
     </div>
 }
+
+async function runCase(item: TestingStatItem, controller: ItemController<TestingStatItem>, runLimited: (item: TestingItem, e: Options) => Promise<RunStatus>, notifyUpdate: () => void) {
+    controller.dispatchUpdate(item => ({ ...item, status: "running", counters: { running: 1 } }))
+    notifyUpdate()
+
+    await runLimited(item.record, { parent: controller.parent?.item?.record, path: controller.path }).then((finalStatus) => {
+        controller.dispatchUpdate(item => ({ ...item, status: finalStatus, counters: { [finalStatus]: 1 } }))
+    }).catch((e) => {
+        controller.dispatchUpdate(item => ({ ...item, status: "error", counters: { "error": 1 } }))
+    })
+    notifyUpdate()
+}
+
+function runFolder(item: TestingStatItem, controller: ItemController<TestingStatItem>, runItem: (item: TestingStatItem, path: ItemPath, notifyUpdate: () => void) => Promise<void>, path: ItemPath, expandListController: ExpandListController<TestingStatItem>, notifyUpdate: () => void) {
+    // reset all counters
+    item.counters = {} as StateCounters
+    if (!item.children?.length) {
+        // nothing to run
+        controller.dispatchUpdate(e => ({ ...e, status: "success", counters: item.counters }))
+        notifyUpdate()
+        return
+    }
+    controller.dispatchUpdate(e => ({ ...e, status: "running", counters: item.counters }))
+    item.status = "running"
+
+    // traverse all children, and make them run
+    item.children?.forEach?.(child => {
+        runItem(child, [...path, child.key], () => {
+            controller.dispatchUpdate(e => {
+                // range all children to get an up to date counters
+                const [newCounters, total] = mergeChildrenCounters(item.children, (chld) => expandListController.getState([...path, chld.key]).counters)
+                let itemStatus: RunStatus = "success"
+                if (newCounters["running"]) {
+                    itemStatus = "running"
+                } else if (newCounters["error"]) {
+                    itemStatus = "error"
+                } else if (newCounters["fail"]) {
+                    itemStatus = "fail"
+                } else if (newCounters["skip"] === total) {
+                    itemStatus = "skip"
+                } else if (newCounters["not_run"] === total) {
+                    itemStatus = "not_run"
+                }
+
+                return {
+                    ...e,
+                    status: itemStatus,
+                    counters: newCounters,
+                }
+            })
+
+            notifyUpdate()
+        }).catch((e) => {
+            console.error("update error:", e)
+            notifyUpdate()
+        })
+    })
+}
+
 function mergeChildrenCounters(children: TestingStatItem[] | undefined, getChildCounters: (chld: TestingStatItem) => Partial<StateCounters>): [Partial<StateCounters>, number] {
     const newCounters: Partial<StateCounters> = {}
     let total = 0
@@ -390,18 +350,94 @@ function mergeChildrenCounters(children: TestingStatItem[] | undefined, getChild
     return [newCounters, total]
 }
 
-export function ItemRender(props: {
-    item: TestingStatItem, controller: ItemController<TestingStatItem>,
+function buildAndFilterItems(data: TestingItem[] | undefined, expandListController: ExpandListController<TestingStatItem>, getMockProperty: MockPropertyGetter, showFailOnly: boolean, showSkipOnly: boolean, getStatus: (path: string[]) => ItemStat | undefined) {
+    const items = buildStatItems(data, expandListController, getMockProperty)
+    return filterItems(items, showFailOnly, showSkipOnly, getStatus)
+}
+
+function buildStatItems(data: TestingItem[] | undefined, expandListController: ExpandListController<TestingStatItem>, getMockProperty: MockPropertyGetter): TestingStatItem[] {
+    // let id = 1
+    const items = map<TestingItem, TestingStatItem>(data, (e, children, idx, itemPath: string[]): TestingStatItem => {
+        // merge with previous status
+        return {
+            record: e,
+            children,
+            leaf: !e.children?.length,
+            counters: {} as StateCounters,
+            key: `${e.name}_${idx}`,
+            ...getMockProperty?.(e),
+            itemStyle: {
+                userSelect: "text"
+            }
+        }
+    })
+    traverse(items, (e) => {
+    }, {
+        after(e, ctx, parentCtx, idx, path) {
+            if (e.record.kind === "case") {
+                const prev = expandListController?.getState?.(path)
+                // console.log("prev:", path, prev)
+                e.counters = prev?.counters || { "not_run": 1 }
+                return
+            }
+            [e.counters] = mergeChildrenCounters(e.children, child => child.counters)
+        },
+    })
+    // console.log("items:", items)
+    return items
+
+}
+
+interface ItemStat {
+    status?: RunStatus
+}
+function filterItems(items: TestingStatItem[], showFailOnly: boolean, showSkipOnly: boolean, getStatus: (path: string[]) => ItemStat | undefined): TestingStatItem[] {
+    if (!showFailOnly && !showSkipOnly) {
+        return items
+    }
+
+    return filter<TestingStatItem, TestingStatItem>(items, (e, path) => {
+        // const state = expandListController.current?.getState?.(path)
+        const state = getStatus(path)
+        if (showFailOnly && state && (state.status === "error" || state.status === "fail")) {
+            return true
+        }
+        if (showSkipOnly && state && (state.status === "skip")) {
+            return true
+        }
+        // if (showErrOnly && (e.record?.error || e.record?.panic)) {
+        //     return true
+        // }
+        // if (showMockOnly && e.needMock) {
+        //     return true
+        // }
+        return false
+    })
+
+    // // update leaf based on children
+    // filter<TestingStatItem, TestingStatItem>(filterItems, e => {
+    //     e.leaf = !e.children?.length
+    //     // e.key = e.key + `_${versionRef.current}`
+    //     return true
+    // })
+}
+export interface ItemRenderProps {
+    item: TestingStatItem, controller: ItemController<TestingStatItem>
+
+    showEditActions?: boolean
+
     disableRun?: boolean
-    onClick?: () => void,
-    showMenu?: boolean,
-    isRoot?: boolean,
-    api?: TestingAPI,
-    onClickRun?: () => void,
+    onClick?: () => void
+    showMenu?: boolean
+    isRoot?: boolean
+    api?: TestingAPI
+    onClickRun?: () => void
     onTreeChangeRequested?: () => void
     onRefreshRoot?: () => void
-}) {
-    const { item, controller, api, onTreeChangeRequested } = props
+}
+
+export function ItemRender(props: ItemRenderProps) {
+    const { item, controller, api, onTreeChangeRequested, showEditActions } = props
     const isRoot = controller && controller.path.length <= 1
 
     const total = useMemo(() => getTotal(item.counters), [item.counters])
@@ -422,8 +458,8 @@ export function ItemRender(props: {
         onClick={props.onClick}
     >
         <RenderStatus status={item?.status} style={{}} />
-        <div className="testing-item-name">{item.record?.kind === "case" ? `[${item.record?.id}]: ${item.record?.name}` : item.record.name}</div>
-        {item.record?.kind !== "case" && <RenderCounter
+        <div className="testing-item-name">{renderItemName(item)}</div>
+        {treatLikeFolder(item) && <RenderCounter
             status={item.status}
             key={item.record.name}
             counters={item.counters}
@@ -452,56 +488,59 @@ export function ItemRender(props: {
             }} />
 
             {
-                item.record?.kind === "testSite" && <VscNewFolder onClick={(e) => {
-                    e.stopPropagation()
-                    if (api?.addFolder) {
-                        Promise.resolve(api?.addFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                            onTreeChangeRequested?.()
-                        })
+                showEditActions !== false && <>
+                    {
+                        item.record?.kind === "testSite" && <VscNewFolder onClick={(e) => {
+                            e.stopPropagation()
+                            if (api?.addFolder) {
+                                Promise.resolve(api?.addFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                    onTreeChangeRequested?.()
+                                })
+                            }
+                        }} />
                     }
-                }} />
-            }
-            {
-                item.record?.kind === "testSite" && <RiDeleteBin6Line onClick={(e) => {
-                    e.stopPropagation()
-                    if (api?.delFolder) {
-                        Promise.resolve(api?.delFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                            onTreeChangeRequested?.()
-                        })
+                    {
+                        item.record?.kind === "testSite" && <RiDeleteBin6Line onClick={(e) => {
+                            e.stopPropagation()
+                            if (api?.delFolder) {
+                                Promise.resolve(api?.delFolder?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                    onTreeChangeRequested?.()
+                                })
+                            }
+                        }} />
                     }
-                }} />
-            }
-            {
-                item.record?.kind !== "case" && <AiOutlinePlus onClick={(e) => {
-                    e.stopPropagation()
-                    if (api?.add) {
-                        Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                            onTreeChangeRequested?.()
-                        })
+                    {
+                        item.record?.kind !== "case" && <AiOutlinePlus onClick={(e) => {
+                            e.stopPropagation()
+                            if (api?.add) {
+                                Promise.resolve(api?.add?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                    onTreeChangeRequested?.()
+                                })
+                            }
+                        }} />
                     }
-                }} />
-            }
-            {
-                item.record?.kind === "case" && <RiDeleteBin6Line onClick={(e) => {
-                    e.stopPropagation()
-                    if (api?.delete) {
-                        Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                            onTreeChangeRequested?.()
-                        })
+                    {
+                        item.record?.kind === "case" && <RiDeleteBin6Line onClick={(e) => {
+                            e.stopPropagation()
+                            if (api?.delete) {
+                                Promise.resolve(api?.delete?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                    onTreeChangeRequested?.()
+                                })
+                            }
+                        }} />
                     }
-                }} />
-            }
-            {
-                item.record?.kind === "case" && <MdContentCopy onClick={(e) => {
-                    e.stopPropagation()
-                    if (api?.duplicate) {
-                        Promise.resolve(api?.duplicate?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
-                            onTreeChangeRequested?.()
-                        })
+                    {
+                        item.record?.kind === "case" && <MdContentCopy onClick={(e) => {
+                            e.stopPropagation()
+                            if (api?.duplicate) {
+                                Promise.resolve(api?.duplicate?.(item.record, { path: controller?.path, parent: controller?.parent?.item?.record })).finally(() => {
+                                    onTreeChangeRequested?.()
+                                })
+                            }
+                        }} />
                     }
-                }} />
+                </>
             }
-
             {
                 isRoot && <VscRefresh onClick={e => {
                     e.stopPropagation()
@@ -510,6 +549,34 @@ export function ItemRender(props: {
             }
         </div>
     </div>
+}
+
+function treatLikeFolder(item: TestingStatItem | undefined): boolean {
+    if (item == null) {
+        return false
+    }
+    if (item.record.kind !== 'case') {
+        return true
+    }
+    if (item.record.children?.length > 0) {
+        return true
+    }
+    return false
+}
+
+function renderItemName(item: TestingStatItem | undefined): ReactElement {
+    if (!item) {
+        return <>unknown</>
+    }
+    let prefix = ''
+    if (item.record?.kind === "case") {
+
+        if (item.record?.id != null) {
+            prefix = `[${item.record?.id}]: `
+        }
+
+    }
+    return <>{prefix}{item.record.name}</>
 }
 
 export interface RenderStatusProps {
