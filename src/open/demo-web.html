@@ -4,12 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <script src="/build/open-web.js"></script>
     <script>
-        const {renderReact,HelloWorld} = Open
-
         // create element using react
         window.onload = function(){
+            const {renderReact,HelloWorld} = Open
             // must run after document loaded 
             const root = document.getElementById("root")
             renderReact(root,HelloWorld)
@@ -19,4 +17,5 @@
 <body>
     <div id="root"></div>
 </body>
+<script src="/build/open-web.js"></script>
 </html>

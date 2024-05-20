@@ -1,6 +1,5 @@
 import { CSSProperties, MutableRefObject, ReactElement, useCallback, useEffect, useRef, useState } from "react"
 import { BlockLineProps, CodeSelection, DiffCodeViewerTitled, LineRenderOptions, ScrollOptions, useDiffCodeViewerTitledController } from "./DiffCodeViewer"
-// import { BlockLineProps, DiffCodeViewerTitled } from "@/coverage-visualizer/src/code-viewer/DiffCodeViewer"
 
 export interface RenderProps {
     style?: CSSProperties

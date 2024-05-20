@@ -108,7 +108,7 @@ function makeConfig(entry, rootDir, buildDir, opts) {
             },
         },
         plugins: [
-            new MonacoWebpackPlugin({}),
+            new MonacoWebpackPlugin({ publicPath: "/" }),
             new CopyPlugin({
                 patterns: [
                     {

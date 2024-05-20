@@ -25,11 +25,13 @@ export interface Options {
     parent: TestingItem
     path: ItemPath
 }
+
+export type RunItem = (item: TestingItem, opts: Options) => Promise<RunStatus>
 export interface TestingAPI {
     add: (item: TestingItem, opts: Options) => Promise<void>
     addFolder: (item: TestingItem, opts: Options) => Promise<void>
     delFolder: (item: TestingItem, opts: Options) => Promise<void>
-    run: (item: TestingItem, opts: Options) => Promise<RunStatus>
+    run: RunItem
     duplicate: (item: TestingItem, opts: Options) => Promise<void>
     delete: (item: TestingItem, opts: Options) => Promise<void>
 }
@@ -56,7 +58,10 @@ export interface TestingListProps {
     className?: string
 
     api?: TestingAPI
-    runLimit?: number // concurrent number to call run
+
+    // concurrent number to call run
+    // default: 10
+    runLimit?: number
 
     // default show
     showEditActions?: boolean
@@ -84,6 +89,7 @@ export function TestingList(props: TestingListProps) {
     const getMockPropertyRef = useCurrent(props.getMockProperty)
 
     const apiRef = useCurrent(props.api)
+    // const runLimit = props.runLimit > 0 ? props.runLimit : 10
     const runLimited = useMemo(() => throttle((item: TestingItem, e: Options) => apiRef.current?.run?.(item, e), props.runLimit), [props.runLimit])
 
     const runLimitedRef = useCurrent(runLimited)

@@ -82,6 +82,10 @@ export interface TestingItem {
     name: string
     kind: TestingItemType
 
+    file?: string
+    line?: number
+    error?: string
+
     // path will be passed back to server
     path?: string
 

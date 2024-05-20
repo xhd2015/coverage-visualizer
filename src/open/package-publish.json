@@ -1,8 +1,8 @@
 {
-    "name": "coverage-visualizer",
-    "version": "0.0.2",
+    "name": "xgo-explorer",
+    "version": "0.0.1",
     "keywords": [
-        "go-coverage",
+        "go-test",
         "xgo"
     ],
     "license": "MIT",
@@ -10,7 +10,7 @@
     "description": "coverage visualizer for xgo(https://github.com/xhd2015/xgo).",
     "repository": {
         "type": "git",
-        "url": "https://github.com/xhd2015/coverage-visualizer"
+        "url": "https://github.com/xhd2015/xgo"
     },
     "dependencies": {},
     "scripts": {},

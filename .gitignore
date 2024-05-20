@@ -1,5 +1,6 @@
 /dist/build
 node_modules
+/node_modules_ignore
 .vscode
 *-private.html
 .DS_Store

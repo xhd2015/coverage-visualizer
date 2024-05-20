@@ -12,4 +12,4 @@ cp src/open/package-publish.json src/open/npm-publish/package.json
 
 cp src/open/build/open-web.js src/open/npm-publish/index.js
 # worker.js by monaco editor
-cp src/open/build/*.worker.js src/open/npm-publish/
+# cp src/open/build/*.worker.js src/open/npm-publish/
