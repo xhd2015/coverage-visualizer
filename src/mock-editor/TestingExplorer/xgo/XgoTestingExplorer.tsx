@@ -1,11 +1,11 @@
-import { CSSProperties, useEffect, useRef, useState } from "react"
-import { Options, RunItem, TestingAPI, TestingList } from "../TestingList"
+import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
+import { Options, RunItem, Session, SessionRunner, TestingAPI, TestingList, UpdateCallback } from "../TestingList"
 import { TestingItem } from "../testing-api"
 import { GridLayout } from "../../../support/components/layout/GridLayout"
 import { XgoTestDetail } from "./XgoTestDetail"
 import { randList } from "../TestingList/TestingListDemo"
 import { RunStatus } from "../testing"
-import { fetchContent, requestRun, useUrlData, useUrlRun } from "./http-data"
+import { fetchContent, newSessionRunner, requestRun, useUrlData, useUrlRun } from "./http-data"
 
 export interface RunDetailResult {
     status: RunStatus
@@ -15,11 +15,15 @@ export interface XgoTestingExplorerProps {
     style?: CSSProperties
     className?: string
 
+    runLimit?: number
+
     data?: TestingItem[]
     onRefreshRoot?: () => void
 
     fetchContent?: (selectedItem: TestingItem) => Promise<string>
     runItem?: RunItem
+    runner?: SessionRunner
+
     runItemDetail?: (item: TestingItem) => Promise<RunDetailResult>
 
     openVscode?: (item: TestingItem) => void
@@ -97,13 +101,14 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
             "testingList": <TestingList
                 data={props.data}
                 showEditActions={false}
-                runLimit={20}
+                runLimit={props.runLimit}
                 api={{
                     ...({} as TestingAPI),
                     run: props.runItem,
                 }}
                 onRefreshRoot={props.onRefreshRoot}
                 onSelectChange={item => setSelectedItem(item)}
+                runner={props.runner}
             />,
             "testingDetail": <XgoTestDetail
                 item={selectedItem}
@@ -125,10 +130,14 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     const apiPrefix = props.apiPrefix || ''
     const { data, refresh } = useUrlData(`${apiPrefix}/list`)
     const run = useUrlRun(`${apiPrefix}/run`)
+
+    const runner = useMemo(() => newSessionRunner(`${apiPrefix}/session/start`, `${apiPrefix}/session/pollStatus`), [])
+
     return <XgoTestingExplorer {...props}
         data={data}
         onRefreshRoot={refresh}
         runItem={run}
+        runner={runner}
         fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
         runItemDetail={item => requestRun(`${apiPrefix}/run`, item, { verbose: true })}
         openVscode={item => {

@@ -58,6 +58,7 @@ export interface TestingListProps {
     className?: string
 
     api?: TestingAPI
+    runner?: SessionRunner
 
     // concurrent number to call run
     // default: 10
@@ -71,6 +72,7 @@ export interface TestingListProps {
     getMockProperty?: MockPropertyGetter
     onSelectChange?: (item: TestingItem, root: TestingItem, index: ItemIndex) => void
 
+    // called when root is ran
     onAllRan?: (counters?: StateCounters) => void
 
     onTreeChangeRequested?: () => void
@@ -79,6 +81,15 @@ export interface TestingListProps {
     onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex, update: (fn: (item: TestingStatItem) => TestingStatItem) => void) => void
 
     checkBeforeSwitch?: (action: () => Promise<void>) => void
+}
+
+export interface SessionRunner {
+    start: (item: TestingItem) => Promise<Session>
+}
+
+export type UpdateCallback = (status: RunStatus) => void
+export interface Session {
+    subscribeUpdate: (item: TestingItem, callback: UpdateCallback) => void
 }
 
 export function TestingList(props: TestingListProps) {
@@ -122,14 +133,15 @@ export function TestingList(props: TestingListProps) {
         }
     }, [items])
 
-    const runItem = async (item: TestingStatItem, path: ItemPath, notifyUpdate: () => void) => {
+    const runItem = async (session: Session | undefined, item: TestingStatItem, path: ItemPath, notifyUpdate: () => void) => {
         // console.log("DEBUG runItem:", path.join("/"), item)
         if (item.status === "running") {
             // disable when already running
-            return// running by other, so here skip
+            // running by other, so here skip
+            return
         }
         // run will contribute to current counter status
-        if (!props.api?.run) {
+        if (!session && !props.api?.run) {
             return
         }
         // update status to running
@@ -139,10 +151,15 @@ export function TestingList(props: TestingListProps) {
         }
 
         if (treatLikeFolder(item)) {
-            runFolder(item, controller, runItem, path, expandListController.current, notifyUpdate)
+            runFolder(item, controller, (item, path, notify) => runItem(session, item, path, notify), path, expandListController.current, notifyUpdate)
         }
         if (item.record?.kind === "case") {
-            await runCase(item, controller, runLimitedRef.current, notifyUpdate)
+            await runCase(session, item, controller, runLimitedRef.current, notifyUpdate)
+        } else if (session != null) {
+            session.subscribeUpdate(item.record, status => {
+                controller.dispatchUpdate(item => ({ ...item, status: status }))
+                notifyUpdate()
+            })
         }
     }
     const clickItem = (item: TestingStatItem, controller: ItemController<TestingStatItem>) => {
@@ -157,20 +174,25 @@ export function TestingList(props: TestingListProps) {
         props.checkBeforeSwitch(action)
     }
 
-    const clickRun = (item: TestingStatItem, controller: ItemController<TestingStatItem>) => {
-        const runAction = () => {
+    const clickRun = async (item: TestingStatItem, controller: ItemController<TestingStatItem>) => {
+        // when click on folder
+        //   check if need to start a new session
+        //   if so, start a new session
+        //   sub folders and cases are run
+        let session: Session | undefined
+        if (props.runner != null) {
+            session = await props.runner.start(item.record)
+        }
+
+        function runAction(item: TestingStatItem) {
             const isRoot = controller.path?.length <= 1
-            let needSave = isRoot
             // console.log("DEBUG run:", controller.path, isRoot)
             // if (true) {
             //     return
             // }
-            runItem(item, controller.path, () => {
+            runItem(session, item, controller.path, () => {
                 // get the update-to-date item
                 const item = controller.item
-                if (!needSave) {
-                    return
-                }
                 if (!isRoot) {
                     return
                 }
@@ -182,13 +204,14 @@ export function TestingList(props: TestingListProps) {
                 if (item.status === 'running' || item.status === 'not_run') {
                     return
                 }
-                needSave = false
                 props.onAllRan?.(item.counters as StateCounters)
             })
         }
+
+
         // if non-case, don't switch to it
         if (item.record?.kind !== "case") {
-            runAction()
+            runAction(item)
             return
         }
 
@@ -214,7 +237,7 @@ export function TestingList(props: TestingListProps) {
             return
         }
 
-        runAction()
+        runAction(item)
 
         // for case, switch to it, and use the 'request' button
         // on the interface
@@ -285,7 +308,16 @@ export function TestingList(props: TestingListProps) {
     </div>
 }
 
-async function runCase(item: TestingStatItem, controller: ItemController<TestingStatItem>, runLimited: (item: TestingItem, e: Options) => Promise<RunStatus>, notifyUpdate: () => void) {
+async function runCase(session: Session, item: TestingStatItem, controller: ItemController<TestingStatItem>, runLimited: (item: TestingItem, e: Options) => Promise<RunStatus>, notifyUpdate: () => void) {
+    if (session != null) {
+        // TODO: support nested case
+        session.subscribeUpdate(item.record, status => {
+            controller.dispatchUpdate(item => ({ ...item, status: status, counters: { [status]: 1 } }))
+            notifyUpdate()
+        })
+        return
+    }
+
     controller.dispatchUpdate(item => ({ ...item, status: "running", counters: { running: 1 } }))
     notifyUpdate()
 
