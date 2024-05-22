@@ -27,6 +27,7 @@ export interface XgoTestingExplorerProps {
     runItemDetail?: (item: TestingItem) => Promise<RunDetailResult>
 
     openVscode?: (item: TestingItem) => void
+    openGoland?: (item: TestingItem) => void
 }
 
 // design:
@@ -72,7 +73,11 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
         }
     }
     const clickVscode = async () => {
-        props.openVscode?.(selectedItem)
+        await props.openVscode?.(selectedItem)
+    }
+
+    const clickGoland = async () => {
+        await props.openGoland?.(selectedItem)
     }
     const clickRefresh = async () => {
         refreshContent(selectedItem)
@@ -117,6 +122,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
                 onClickRun={clickRunDetail}
                 running={detailRunning}
                 onClickVscode={clickVscode}
+                onClickGoland={clickGoland}
                 onClickRefresh={clickRefresh}
             />
         }}
@@ -133,6 +139,10 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
 
     const runner = useMemo(() => newSessionRunner(`${apiPrefix}/session/start`, `${apiPrefix}/session/pollStatus`), [])
 
+    const open = async (item: TestingItem, url: string) => {
+        const params = new URLSearchParams({ file: item.file, line: String(item.line) }).toString()
+        await fetch(url + "?" + params)
+    }
     return <XgoTestingExplorer {...props}
         data={data}
         onRefreshRoot={refresh}
@@ -140,9 +150,11 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         runner={runner}
         fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
         runItemDetail={item => requestRun(`${apiPrefix}/run`, item, { verbose: true })}
-        openVscode={item => {
-            const params = new URLSearchParams({ file: item.file, line: String(item.line) }).toString()
-            fetch(`${apiPrefix}/openVscode?` + params)
+        openVscode={async item => {
+            await open(item, `${apiPrefix}/openVscode`)
+        }}
+        openGoland={async item => {
+            await open(item, `${apiPrefix}/openGoland`)
         }}
     />
 }

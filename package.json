@@ -17,7 +17,8 @@
   "scripts": {
     "build": "webpack --config webpack.config.js --progress --mode=production",
     "watch": "NODE_OPTIONS=--max-old-space-size=8192 webpack --config webpack.config.js --watch --progress --mode=development",
-    "file_server": "node src/support/server/file-server.js"
+    "file_server": "node src/support/server/file-server.js",
+    "build-open": "bash -x ./src/open/script/build-for-publish.sh"
   },
   "devDependencies": {
     "@babel/cli": "^7.1.0",
