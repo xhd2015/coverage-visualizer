@@ -92,6 +92,8 @@ export interface TestingItem {
     method?: string // for case
     id?: number // for case
 
+    relPath?: string
+
     children?: TestingItem[]
 }
 

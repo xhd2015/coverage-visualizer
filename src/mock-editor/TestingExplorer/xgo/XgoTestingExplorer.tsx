@@ -28,6 +28,7 @@ export interface XgoTestingExplorerProps {
 
     openVscode?: (item: TestingItem) => void
     openGoland?: (item: TestingItem) => void
+    copyText?: (item: TestingItem) => string
 }
 
 // design:
@@ -123,6 +124,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
                 running={detailRunning}
                 onClickVscode={clickVscode}
                 onClickGoland={clickGoland}
+                copyText={selectedItem && props.copyText && props.copyText(selectedItem)}
                 onClickRefresh={clickRefresh}
             />
         }}
@@ -155,6 +157,13 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         }}
         openGoland={async item => {
             await open(item, `${apiPrefix}/openGoland`)
+        }}
+        copyText={item => {
+            const path = item.relPath || item.file
+            if (!path) {
+                return
+            }
+            return `${path}${item.line > 0 ? `:${item.line}` : ""}`
         }}
     />
 }

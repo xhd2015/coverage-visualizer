@@ -51,7 +51,7 @@ export function ItemDetail(props: XgoTestDetailProps) {
 
             <ProgressIcon icon={SiGoland} onClick={props.onClickGoland} style={{ color: "rgb(51, 51, 51)", backgroundColor: "rgb(221, 221, 221)", cursor: "pointer", marginLeft: "2px" }} height={20} width={20} />
 
-            <CopyClipboard style={{ marginLeft: "2px" }} copyIcon={GoFileCode} copiedIcon={BsFileEarmarkCheck} text={props.copyText || 'test'} />
+            <CopyClipboard style={{ marginLeft: "2px" }} copyIcon={GoFileCode} copiedIcon={BsFileEarmarkCheck} text={props.copyText} />
         </div>
 
         <TextEditor containerStyle={{ flexGrow: 1 }} style={{ height: "300px" }} value={props.content} language="go" readonly />
