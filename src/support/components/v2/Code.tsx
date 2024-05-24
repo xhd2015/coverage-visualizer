@@ -15,22 +15,8 @@ import "./code.css"
 // import loaders just not working
 // import "./fix-icons.css"
 
-let codeIconsTTFLoaded = false
-function ensureCodeIconsTTFLoaded() {
-    if (codeIconsTTFLoaded) {
-        return
-    }
-    codeIconsTTFLoaded = true
-    // runtime import
-    const dynStyle = document.createElement("style")
-    dynStyle.textContent = ` @font-face {
-            font-family: "codicon";
-            src: url("/build/monaco-code-icons.tff");
-          }`
-    document.body.appendChild(dynStyle)
-}
-
-ensureCodeIconsTTFLoaded()
+// however import tff via ts works
+import "./load-monaco-tff"
 
 export interface RenderTarget {
     monacoIconLabel: { title: string }

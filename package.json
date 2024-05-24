@@ -12,13 +12,15 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.2.1",
-    "react-monaco-editor": "^0.49.0"
+    "react-monaco-editor": "^0.49.0",
+    "webpack": "^5.91.0"
   },
   "scripts": {
     "build": "webpack --config webpack.config.js --progress --mode=production",
     "watch": "NODE_OPTIONS=--max-old-space-size=8192 webpack --config webpack.config.js --watch --progress --mode=development",
     "file_server": "node src/support/server/file-server.js",
-    "build-open": "bash -x ./src/open/script/build-for-publish.sh"
+    "build-open": "bash -x ./src/open/script/build-for-publish.sh",
+    "serve-open": "bash -x ./src/open/script/serve.sh"
   },
   "devDependencies": {
     "@babel/cli": "^7.1.0",

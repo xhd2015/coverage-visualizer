@@ -28,3 +28,5 @@ All css and resource are bundled together.
     npm publish
 )
 ```
+
+Npm: https://www.npmjs.com/package/xgo-explorer

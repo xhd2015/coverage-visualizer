@@ -8,7 +8,7 @@ module.exports = {
     },
     output: {
         ...base.output,
-        filename: "open-web.js",
+        filename: "index.js",
         library: {
             name: 'Open',
             type: 'window'

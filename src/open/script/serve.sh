@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
 set -eo pipefail
 
-http-server -c-1 src/open
+# cors=*: allow tff files to be loaded
+http-server -c-1 '--cors=*' src/open

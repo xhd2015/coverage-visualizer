@@ -9,6 +9,7 @@ const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPl
 // buildDir: output of build
 // opts: { alias: alias map, publicPath }
 function makeConfig(entry, rootDir, buildDir, opts) {
+    const publicPath = opts?.publicPath ? opts?.publicPath : '/build'
     return {
         target: ['web', 'es5'],
         experiments: {
@@ -18,9 +19,9 @@ function makeConfig(entry, rootDir, buildDir, opts) {
             index: entry,
         },
         output: {
-            filename: "open.js",
+            filename: "index.js",
             path: buildDir,
-            publicPath: opts?.publicPath ? opts?.publicPath : '/build',
+            publicPath: publicPath,
             library: {
                 type: 'module'
             }
@@ -108,7 +109,12 @@ function makeConfig(entry, rootDir, buildDir, opts) {
             },
         },
         plugins: [
-            new MonacoWebpackPlugin({ publicPath: "/" }),
+            new MonacoWebpackPlugin({
+                // publicPath: "http://localhost:8081/npm-publish",
+                filename: "[name].monaco.js",
+                languages: ["go", "json"]
+            }),
+            // see src/support/components/v2/load-monaco-tff.ts
             new CopyPlugin({
                 patterns: [
                     {
@@ -121,7 +127,9 @@ function makeConfig(entry, rootDir, buildDir, opts) {
                 ],
             }),
             new webpack.DefinePlugin({
+                // specifically for monaco tff
                 "process.env": {
+                    "MONACO_PUBLIC_PATH": JSON.stringify(publicPath || ''),
                 },
             }),
             new webpack.ProvidePlugin({
@@ -132,6 +140,16 @@ function makeConfig(entry, rootDir, buildDir, opts) {
     }
 }
 
+const version = require("./version")
+function makePackageJSON(dst) {
+    const data = fs.readFileSync(path.join(__dirname, "package-publish.json"), { encoding: "utf-8" })
+    const p = JSON.parse(data)
+    p.version = version
+
+    fs.writeFileSync(dst, JSON.stringify(p, null, 4))
+}
+
 module.exports = {
     makeConfig,
+    makePackageJSON,
 }
