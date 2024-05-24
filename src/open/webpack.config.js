@@ -8,7 +8,7 @@ const rootDir = path.resolve(__dirname, "../..")
 const buildDir = path.resolve(__dirname, "build")
 
 module.exports = makeConfig(entry, rootDir, buildDir, {
-    // publicPath: `https://cdn.jsdelivr.net/npm/xgo-explorer@${version}/`,
-    publicPath: `http://localhost:8081/npm-publish/`,
+    publicPath: `https://cdn.jsdelivr.net/npm/xgo-explorer@${version}/`,
+    // publicPath: `http://localhost:8081/npm-publish/`,
     // publicPath: "auto",
 })
