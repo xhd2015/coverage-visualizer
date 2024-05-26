@@ -54,10 +54,10 @@ export function ItemDetail(props: XgoTestDetailProps) {
             <CopyClipboard style={{ marginLeft: "2px" }} copyIcon={GoFileCode} copiedIcon={BsFileEarmarkCheck} text={props.copyText} />
         </div>
 
-        <TextEditor containerStyle={{ flexGrow: 1 }} style={{ height: "300px" }} value={props.content} language="go" readonly />
+        <TextEditor containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }} value={props.content} language="go" readonly />
         <div style={{ width: "100%", textAlign: "center" }}>
             <Button onClick={props.onClickRun} loading={props.running}>Test</Button>
         </div>
-        <TextEditor containerStyle={{ flexGrow: 1 }} style={{ height: "200px" }} value={props.log} readonly />
+        <TextEditor containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }} value={props.log} readonly />
     </div>
 }

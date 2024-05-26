@@ -5,7 +5,7 @@ import { CSSProperties, MutableRefObject, useEffect, useRef, useState } from "re
 import { FileDetailGetter, ITreeNode } from "../../support/file";
 import { BiExpandAlt } from "react-icons/bi"
 
-import { useCurrent } from "../../../mock-editor/react-hooks";
+import { CurrentRef, useCurrent } from "../../../mock-editor/react-hooks";
 import { ContentDecorator, normalizeCodeContent, useMonacoModel } from "./model";
 
 import "./code.css"
@@ -86,10 +86,15 @@ function setEditorDiagnose(editor: monaco.editor.IStandaloneCodeEditor,) {
 function setOnTop(editor: monaco.editor.IStandaloneCodeEditor) {
 
 }
+// Code will automatically resize based on container dynamic size:
+// a typical usage is to use Code inside a flex-column container, where declare flexBasis as 50%, then set
+// flex-shrink and flex-grow to 1, and set Code's height to 100% to flow the flex container:
+// 
+//  <Code  containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }}/>
+//  <Code  containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }}/>
 
 // Code as a central registry
 export default function Code(props: IProps) {
-
     const modelRefreshRef = useRef<() => any>()
     const [editor, setEditor] = useState(null as monaco.editor.IStandaloneCodeEditor)
     const [version, setVersion] = useState(0)
@@ -164,56 +169,27 @@ export default function Code(props: IProps) {
     const onEditorCreatedRef = useCurrent(props.onEditorCreated)
     // create monaco on mount
     useEffect(() => {
-        const editor = monaco.editor.create(
-            containerRef.current,
-            {
-                readOnly: false,
-                scrollbar: {
-                    // see this, make scroll propagate to
-                    // parent possible:
-                    // https://github.com/microsoft/monaco-editor/issues/1853#issuecomment-593484147
-                    alwaysConsumeMouseWheel: false,
-                },
-                automaticLayout: true,
-            }
-        );
-        if (props.initContent !== undefined) {
-            editor.setValue(props.initContent)
-        }
-
-        editor.onDidChangeModelContent(() => {
-            if (onContentChangeRef.current) {
-                onContentChangeRef.current?.(editor.getValue())
-            }
+        const editor = createAutoLayoutEditor(containerRef.current, props.initContent, {
+            onContentChangeRef: onContentChangeRef,
+            editorRef: props.editorRef,
+            onEditorCreatedRef: onEditorCreatedRef,
         })
-
-        editor.layout()
-        setEditor(editor);
-        const handler = (e) => {
-            editor.layout()
-        }
-
-        if (props.editorRef) {
-            props.editorRef.current = editor
-        }
-        onEditorCreatedRef.current?.(editor)
-
-        // resize
-        window.addEventListener('resize', handler);
-        return () => {
-            window.removeEventListener('resize', handler)
-            editor.dispose()
-            if (props.editorRef) {
+        setEditor(editor)
+        setupEditorAutoLayout(editor, () => {
+            if (props.editorRef != null) {
                 props.editorRef.current = undefined
             }
-        }
+        })
     }, [])
 
-    return <div style={{
-        position: "relative",
-        ...props.containerStyle,
-        // width: "500px",
-    }} className={`code-container ${props.containerClassName || ""}`} >
+    return <div
+        // id="debug" // NOTE: the editor will auto layout based on parent height
+        style={{
+            position: "relative",
+            ...props.containerStyle,
+            // height: undefined,
+            // width: "500px",
+        }} className={`code-container ${props.containerClassName || ""}`} >
         {
             props.showExpandIcon && <div className="code-container-zoom">
                 <BiExpandAlt style={{ cursor: "pointer" }} onClick={() => {
@@ -235,4 +211,59 @@ export default function Code(props: IProps) {
             }}
         />
     </ div>
+}
+
+function createAutoLayoutEditor(containerEl: HTMLElement, value: string | undefined, opts?: {
+    onContentChangeRef?: CurrentRef<(value: string) => void>
+    editorRef?: MutableRefObject<monaco.editor.IStandaloneCodeEditor>
+    onEditorCreatedRef?: MutableRefObject<(editor: monaco.editor.IStandaloneCodeEditor) => void>
+}): monaco.editor.IStandaloneCodeEditor {
+    const editor = monaco.editor.create(
+        containerEl,
+        {
+            readOnly: false,
+            scrollbar: {
+                // see this, make scroll propagate to
+                // parent possible:
+                // https://github.com/microsoft/monaco-editor/issues/1853#issuecomment-593484147
+                alwaysConsumeMouseWheel: false,
+            },
+            automaticLayout: true,
+        }
+    );
+    if (value !== undefined) {
+        editor.setValue(value)
+    }
+
+    editor.onDidChangeModelContent(() => {
+        if (opts?.onContentChangeRef?.current != null) {
+            opts.onContentChangeRef.current?.(editor.getValue())
+        }
+    })
+
+    editor.layout()
+
+    if (opts?.editorRef != null) {
+        opts.editorRef.current = editor
+    }
+    if (opts?.onEditorCreatedRef?.current != null) {
+        opts.onEditorCreatedRef.current?.(editor)
+    }
+
+    return editor
+}
+
+function setupEditorAutoLayout(editor: monaco.editor.IStandaloneCodeEditor, onDispose: () => void) {
+    const handler = (e) => {
+        editor.layout()
+    }
+    // resize
+    window.addEventListener('resize', handler);
+    return () => {
+        window.removeEventListener('resize', handler)
+        editor.dispose()
+        if (onDispose != null) {
+            onDispose()
+        }
+    }
 }
