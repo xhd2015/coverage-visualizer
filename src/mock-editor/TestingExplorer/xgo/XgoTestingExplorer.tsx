@@ -5,12 +5,15 @@ import { GridLayout } from "../../../support/components/layout/GridLayout"
 import { XgoTestDetail } from "./XgoTestDetail"
 import { randList } from "../TestingList/TestingListDemo"
 import { RunStatus } from "../testing"
-import { fetchContent, newSessionRunner, requestRun, useUrlData, useUrlRun } from "./http-data"
+import { fetchContent, newSessionRunner, requestDebug, requestRun, useUrlData, useUrlRun } from "./http-data"
+import { useCurrent } from "../../react-hooks"
+import { useLoading } from "../../../support/hook/useLoading"
 
 export interface RunDetailResult {
     status: RunStatus
     msg: string
 }
+
 export interface XgoTestingExplorerProps {
     style?: CSSProperties
     className?: string
@@ -25,6 +28,7 @@ export interface XgoTestingExplorerProps {
     runner?: SessionRunner
 
     runItemDetail?: (item: TestingItem) => Promise<RunDetailResult>
+    debugItemDetail?: (item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>) => Promise<void>
 
     openVscode?: (item: TestingItem) => void
     openGoland?: (item: TestingItem) => void
@@ -62,17 +66,15 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
         }
     }, [selectedItem])
 
-    const [detailRunning, setDetailRunning] = useState(false)
-    const clickRunDetail = async () => {
-        setDetailRunning(true)
-        try {
-            const response = await props.runItemDetail?.(selectedItem)
-            logMapping.current[`${selectedItem.file}:${selectedItem.name}`] = response.msg
-            setLog(response.msg)
-        } finally {
-            setDetailRunning(false)
-        }
-    }
+    const [detailRunning, clickRunDetail] = useLoading(async () => {
+        const response = await props.runItemDetail?.(selectedItem)
+        logMapping.current[`${selectedItem.file}:${selectedItem.name}`] = response.msg
+        setLog(response.msg)
+    })
+    const [debugging, clickDebug] = useLoading(async () => {
+        await props.debugItemDetail?.(selectedItem, setLog)
+    })
+
     const clickVscode = async () => {
         await props.openVscode?.(selectedItem)
     }
@@ -122,6 +124,8 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
                 log={log}
                 onClickRun={clickRunDetail}
                 running={detailRunning}
+                onClickDebug={clickDebug}
+                debugging={debugging}
                 onClickVscode={clickVscode}
                 onClickGoland={clickGoland}
                 copyText={selectedItem && props.copyText && props.copyText(selectedItem)}
@@ -152,6 +156,10 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         runner={runner}
         fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
         runItemDetail={item => requestRun(`${apiPrefix}/run`, item, { verbose: true })}
+        debugItemDetail={async (item, setLog) => {
+            await requestDebug(`${apiPrefix}/debug`, `${apiPrefix}/debug/pollStatus`, item, setLog)
+        }}
+
         openVscode={async item => {
             await open(item, `${apiPrefix}/openVscode`)
         }}

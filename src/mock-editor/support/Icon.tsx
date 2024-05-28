@@ -9,6 +9,7 @@ export interface IconProps {
     loading?: boolean
     style?: CSSProperties
     rootStyle?: CSSProperties
+    loadingStyle?: CSSProperties
 }
 
 export default function (props: IconProps) {
@@ -31,7 +32,7 @@ export default function (props: IconProps) {
                         }
                     })
                 }
-                {props.loading && <Loading disabled={props.disabled} />}
+                {props.loading && <Loading style={props.loadingStyle} disabled={props.disabled} />}
             </div>
         }   </>
 }

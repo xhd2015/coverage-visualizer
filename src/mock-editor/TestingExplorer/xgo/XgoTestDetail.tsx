@@ -1,13 +1,15 @@
 import { Button } from "antd"
-import { CSSProperties } from "react"
+import { CSSProperties, useEffect, useState } from "react"
 import { AiOutlineReload } from "react-icons/ai"
 import { BsFileEarmarkCheck } from "react-icons/bs"
+import { FiChevronLeft, FiChevronRight } from "react-icons/fi"
 import { GoFileCode } from "react-icons/go"
 import { SiGoland } from "react-icons/si"
 import { VscVscode } from "react-icons/vsc"
 import { ProgressIcon } from "../../../support/components/icon/ProgressIcon"
 import TextEditor from "../../TextEditor"
 import CopyClipboard from "../../support/CopyClipboard"
+import Icon from "../../support/Icon"
 import { TestingItem } from "../testing-api"
 
 export interface XgoTestDetailProps {
@@ -19,11 +21,14 @@ export interface XgoTestDetailProps {
     log?: string
 
     onClickRun?: () => void
+    onClickDebug?: () => void
     onClickVscode?: () => void
     onClickGoland?: () => void
     copyText?: string
     onClickRefresh?: () => void
     running?: boolean
+
+    debugging?: boolean
 }
 
 // debug with trace enabled
@@ -42,6 +47,8 @@ export function ItemDetail(props: XgoTestDetailProps) {
         return <div>{item.file}</div>
     }
 
+    const disableButtons = !!(props.running || props.debugging)
+
     return <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ marginBottom: "2px" }}>
             <AiOutlineReload style={{ cursor: "pointer", }}
@@ -55,9 +62,48 @@ export function ItemDetail(props: XgoTestDetailProps) {
         </div>
 
         <TextEditor containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }} value={props.content} language="go" readonly />
-        <div style={{ width: "100%", textAlign: "center" }}>
-            <Button onClick={props.onClickRun} loading={props.running}>Test</Button>
+        <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%", display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                <Button onClick={props.onClickRun} loading={props.running} disabled={disableButtons} type="primary">Test</Button>
+            </div>
+
+            <div style={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%", display: "flex", alignItems: "center", justifyContent: "flex-start", height: "100%" }}>
+                <ExpandActions>
+                    <Button onClick={props.onClickDebug} loading={props.debugging} disabled={disableButtons} size="middle" >Debug</Button>
+                </ExpandActions>
+            </div>
+
         </div>
         <TextEditor containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }} value={props.log} readonly />
     </div>
+}
+
+export function ExpandActions(props: { value?: boolean, children?: any, rootStyle?: CSSProperties }) {
+    const [expanded, setExpanded] = useState(!!props.value)
+    return <>
+        <ExpandIcon value={expanded} onChange={setExpanded} rootStyle={props.rootStyle} />
+        {
+            expanded && props.children
+        }
+    </>
+}
+
+
+export interface ExpandIconProps {
+    value?: boolean
+    onChange?: (v: boolean) => void
+
+    rootStyle?: CSSProperties
+}
+
+export function ExpandIcon(props: ExpandIconProps) {
+    const [expanded, setExpanded] = useState(!!props.value)
+
+    useEffect(() => {
+        props.onChange?.(expanded)
+    }, [expanded])
+
+    return <Icon rootStyle={{ display: "inline-flex", ...props.rootStyle }} icon={expanded ? FiChevronLeft : FiChevronRight} onClick={() => {
+        setExpanded(e => !e)
+    }} />
 }
