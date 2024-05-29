@@ -3,19 +3,22 @@ import { RunStatus } from "../testing"
 import { TestingItem } from "../testing-api"
 import { Options, RunItem, Session, SessionRunner, UpdateCallback } from "../TestingList"
 
-export async function requestRun(url: string, item: TestingItem, opts?: { verbose?: boolean }): Promise<{ status: RunStatus, msg: string }> {
+export async function requestPoll(url: string, pollURL: string, body: any, callback: (err: Error, events: ItemEvent[]) => boolean): Promise<void> {
     const resp = await fetch(url, {
         method: "POST",
-        body: JSON.stringify({ file: item.file, name: item.name, verbose: !!opts?.verbose })
+        body: JSON.stringify(body)
     })
     if (resp.status !== 200) {
-        return { status: "error", msg: await resp.text() }
+        const text = await resp.text()
+        throw new Error(text)
     }
+    const sessionResult: StartSessionResult = await resp.json()
+    const sessionID = sessionResult.id
 
-    return await resp.json()
+    await pollStatus(pollURL, sessionID, callback)
 }
 
-
+// poll every 500ms
 async function pollStatus(pollEventURL: string, sessionID: string, callback: (err: Error | undefined, events: ItemEvent[]) => boolean) {
     const body = JSON.stringify({ id: sessionID })
     let init = true
@@ -46,26 +49,31 @@ async function pollStatus(pollEventURL: string, sessionID: string, callback: (er
     }
 }
 
-export async function requestDebug(url: string, pollURL: string, item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>, opts?: {}): Promise<void> {
-    setLog("debugging...\n")
+
+export async function requestRun(url: string, item: TestingItem, opts?: { verbose?: boolean }): Promise<{ status: RunStatus, msg: string }> {
     const resp = await fetch(url, {
         method: "POST",
-        body: JSON.stringify({ item })
+        body: JSON.stringify({ file: item.file, name: item.name, verbose: !!opts?.verbose })
     })
     if (resp.status !== 200) {
-        setLog(log => log + "error: ")
-        const text = await resp.text()
-        setLog(log => log + text + "\n")
-        return
+        return { status: "error", msg: await resp.text() }
     }
-    const sessionResult: StartSessionResult = await resp.json()
-    const sessionID = sessionResult.id
 
-    await pollStatus(pollURL, sessionID, (err, events) => {
+    return await resp.json()
+}
+
+export async function requestRunPoll(url: string, pollURL: string, item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>, opts?: {}): Promise<void> {
+    let fails = 0
+    await requestPoll(url, pollURL, { item }, (err, events) => {
         if (err != null) {
+            fails++
+            if (fails > 10) {
+                throw err
+            }
             setLog(log => log + "poll err: " + err.message + "\n")
             return false
         }
+        fails = 0
         for (const e of events) {
             if (e.event === Event.TestEnd) {
                 return true

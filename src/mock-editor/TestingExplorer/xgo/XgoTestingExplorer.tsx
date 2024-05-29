@@ -5,7 +5,7 @@ import { GridLayout } from "../../../support/components/layout/GridLayout"
 import { XgoTestDetail } from "./XgoTestDetail"
 import { randList } from "../TestingList/TestingListDemo"
 import { RunStatus } from "../testing"
-import { fetchContent, newSessionRunner, requestDebug, requestRun, useUrlData, useUrlRun } from "./http-data"
+import { fetchContent, newSessionRunner, requestRunPoll, requestRun, useUrlData, useUrlRun } from "./http-data"
 import { useCurrent } from "../../react-hooks"
 import { useLoading } from "../../../support/hook/useLoading"
 
@@ -27,7 +27,7 @@ export interface XgoTestingExplorerProps {
     runItem?: RunItem
     runner?: SessionRunner
 
-    runItemDetail?: (item: TestingItem) => Promise<RunDetailResult>
+    runItemDetail?: (item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>) => Promise<void>
     debugItemDetail?: (item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>) => Promise<void>
 
     openVscode?: (item: TestingItem) => void
@@ -67,9 +67,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
     }, [selectedItem])
 
     const [detailRunning, clickRunDetail] = useLoading(async () => {
-        const response = await props.runItemDetail?.(selectedItem)
-        logMapping.current[`${selectedItem.file}:${selectedItem.name}`] = response.msg
-        setLog(response.msg)
+        await props.runItemDetail?.(selectedItem, setLog)
     })
     const [debugging, clickDebug] = useLoading(async () => {
         await props.debugItemDetail?.(selectedItem, setLog)
@@ -138,6 +136,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
 export interface UrlXgoTestingExplorerProps extends XgoTestingExplorerProps {
     apiPrefix?: string
 }
+
 export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     const apiPrefix = props.apiPrefix || ''
     const { data, refresh } = useUrlData(`${apiPrefix}/list`)
@@ -155,9 +154,13 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         runItem={run}
         runner={runner}
         fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
-        runItemDetail={item => requestRun(`${apiPrefix}/run`, item, { verbose: true })}
+        runItemDetail={async (item, setLog) => {
+            setLog("")
+            await requestRunPoll(`${apiPrefix}/run`, `${apiPrefix}/run/pollStatus`, item, setLog)
+        }}
         debugItemDetail={async (item, setLog) => {
-            await requestDebug(`${apiPrefix}/debug`, `${apiPrefix}/debug/pollStatus`, item, setLog)
+            setLog("")
+            await requestRunPoll(`${apiPrefix}/debug`, `${apiPrefix}/debug/pollStatus`, item, setLog)
         }}
 
         openVscode={async item => {
