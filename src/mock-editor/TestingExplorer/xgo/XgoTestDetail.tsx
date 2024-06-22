@@ -11,6 +11,7 @@ import TextEditor from "../../TextEditor"
 import CopyClipboard from "../../support/CopyClipboard"
 import Icon from "../../support/Icon"
 import { TestingItem } from "../testing-api"
+import { RunStatus } from "../testing"
 
 export interface XgoTestDetailProps {
     style?: CSSProperties
@@ -38,13 +39,28 @@ export function XgoTestDetail(props: XgoTestDetailProps) {
     </div>
 }
 
+function getStatusColor(status: RunStatus): string | undefined {
+    if (status == "fail" || status === "error") {
+        return "red"
+    }
+    if (status === "success") {
+        return "green"
+    }
+    return undefined
+}
 export function ItemDetail(props: XgoTestDetailProps) {
     const item = props.item
     if (item == null) {
         return <>Select a Case</>
     }
-    if (item.kind == "dir") {
-        return <div>{item.file}</div>
+    if (item.kind !== "case") {
+        return <div>
+            {item.file}
+
+            {item.state?.logs &&
+                <TextEditor containerStyle={{ height: "80%" }} style={{ height: "100%" }} value={item.state?.logs} readonly />
+            }
+        </div>
     }
 
     const disableButtons = !!(props.running || props.debugging)

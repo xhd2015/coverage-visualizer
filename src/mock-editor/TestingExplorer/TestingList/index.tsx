@@ -8,18 +8,18 @@ import { MdContentCopy } from "react-icons/md"
 import { RiDeleteBin6Line } from "react-icons/ri"
 import { VscPlay } from "react-icons/vsc"
 
-import ExpandList, { ExpandItem, ExpandListController, ItemController, useExpandListController, useSelect } from "../../ExpandList"
-import { ItemIndex, ItemPath } from "../../List"
-import { useCurrent } from "../../react-hooks"
+import ExpandList, { BG_SELECTED, ExpandItem, ExpandListController, ExpandListItemRenderV2, ItemController, useExpandListController, useSelect } from "../../ExpandList"
+import { ItemIndex, ItemPath, List } from "../../List"
+import { useCurrent, useUpdatedEffect } from "../../react-hooks"
+import Checkbox from "../../support/Checkbox"
 import ToolBar from "../../support/ToolBar"
 import { filter, map, traverse } from "../../tree"
-import { allStatus, RunStatus } from "../testing"
-import { TestingItem } from "../testing-api"
-import "./TestingList.css"
-import Checkbox from "../../support/Checkbox"
 import { throttle } from "../../util/throttle"
+import { allStatus, RunStatus } from "../testing"
+import { TestingItem, TestingItemType } from "../testing-api"
+import "./TestingList.css"
 
-type StateCounters = Record<RunStatus, number>
+export type StateCounters = Record<RunStatus, number>
 
 export interface Options {
     parent: TestingItem
@@ -38,7 +38,6 @@ export interface TestingAPI {
 
 interface TestingStatItem extends ExpandItem {
     record?: TestingItem
-
     status?: RunStatus
 
     counters: Partial<StateCounters>
@@ -53,16 +52,8 @@ export interface MockProperty {
 }
 export type MockPropertyGetter = (e: TestingItem) => MockProperty
 
-export interface TestingListProps {
-    data?: TestingItem[]
+export interface TestingListBaseProps {
     className?: string
-
-    api?: TestingAPI
-    runner?: SessionRunner
-
-    // concurrent number to call run
-    // default: 10
-    runLimit?: number
 
     // default show
     showEditActions?: boolean
@@ -78,13 +69,26 @@ export interface TestingListProps {
     onTreeChangeRequested?: () => void
     onRefreshRoot?: () => void
 
-    onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex, update: (fn: (item: TestingStatItem) => TestingStatItem) => void) => void
-
     checkBeforeSwitch?: (action: () => Promise<void>) => void
 }
 
+export interface TestingListProps extends TestingListBaseProps {
+    data?: TestingItem[]
+    api?: TestingAPI
+
+
+    runner?: SessionRunner
+
+    // concurrent number to call run
+    // default: 10
+    runLimit?: number
+
+    onClickCaseRun?: (item: TestingItem, root: TestingItem, index: ItemIndex, update: (fn: (item: TestingStatItem) => TestingStatItem) => void) => void
+}
+
+
 export interface SessionRunner {
-    start: (item: TestingItem) => Promise<Session>
+    start: (item: TestingItem, path: ItemPath) => Promise<Session>
 }
 
 export type UpdateCallback = (status: RunStatus) => void
@@ -181,7 +185,7 @@ export function TestingList(props: TestingListProps) {
         //   sub folders and cases are run
         let session: Session | undefined
         if (props.runner != null) {
-            session = await props.runner.start(item.record)
+            session = await props.runner.start(item.record, [])
         }
 
         function runAction(item: TestingStatItem) {
@@ -306,6 +310,121 @@ export function TestingList(props: TestingListProps) {
             />}
         />
     </div>
+}
+
+
+export enum HideType {
+    None = "",
+    All = "all",
+    Children = "children"
+}
+export interface TestingItemState {
+    selected?: boolean
+    expanded?: boolean
+    status?: RunStatus
+    debugging?: boolean
+    logs?: string
+    counters?: any // sub status
+
+    // hide type
+    hideType?: HideType
+}
+
+export interface TestingItemV2 /* extends Omit<TestingItem, "children"> */ {
+    key: string
+
+    // mapping is not necessary as looking up by
+    // key isn't really that useful
+    children?: TestingItemV2[]
+
+    kind?: TestingItemType
+    state?: TestingItemState
+
+    overallStatus?: RunStatus
+}
+
+// V2 is purely data driven, no internal state change
+export interface TestingListV2Props<T extends TestingItemV2> extends TestingListBaseProps {
+    data: T
+    onChange?: (data: T) => void
+    buildListItem?: (item: TestingListItem) => TestingListItem
+
+    onClickExpand?: (item: TestingListItem, path: ItemPath, expand: boolean) => void
+    onClickItem?: (item: TestingListItem, path: ItemPath) => void
+    onClickRun?: (item: TestingListItem, path: ItemPath) => void
+}
+
+export interface TestingListItem extends TestingItemV2 {
+    counters: Partial<StateCounters>
+    children?: TestingListItem[]
+    listStyle?: CSSProperties
+    hideList?: boolean
+    hide?: boolean
+}
+
+export function TestingListV2<T extends TestingItemV2>(props: TestingListV2Props<T>) {
+    const data = props.data
+
+    const buildListItemRef = useCurrent(props.buildListItem)
+    const listItems = useMemo(() => map<TestingItemV2, TestingListItem>([data], (e, children): TestingListItem => {
+        let testingItem: TestingListItem = {
+            ...e,
+            children,
+            listStyle: {
+                listStyleType: "none",
+            },
+            hide: e.state?.hideType === HideType.All,
+            hideList: (e?.state?.expanded === false || e.state?.hideType === HideType.Children),
+            counters: {},
+        }
+        if (buildListItemRef.current) {
+            testingItem = buildListItemRef.current(testingItem)
+        }
+        return testingItem
+    }), [data])
+
+    const onChangeRef = useCurrent(props.onChange)
+    useUpdatedEffect(() => {
+        if (onChangeRef.current != null) {
+            onChangeRef.current(data)
+        }
+    }, [data])
+
+    return <List
+        items={listItems}
+        style={{
+            listStyleType: 'none',
+            ...props.style,
+        }}
+        render={(item, path) => <ExpandListItemRenderV2
+            item={{ key: item.key, leaf: !item.children?.length, expandContainerStyle: { backgroundColor: item.state?.selected ? BG_SELECTED : undefined } }}
+            key={item.key}
+            clickStyleUseV1
+            expandIconUseV1
+            expanded={item.state?.expanded}
+            onClickToggle={e => {
+                props.onClickExpand?.(item, path, e)
+            }}
+            itemRenderContent={<ItemRenderV2
+                showEditActions={false}
+                isRoot={path.length === 1}
+                item={{
+                    leaf: !item.children?.length,
+                    key: item.key,
+                    record: { key: item.key, kind: item.kind, name: item.key, state: item.state },
+                    counters: item.counters,
+                    status: item.overallStatus,
+                }}
+                onClick={() => {
+                    props.onClickItem?.(item, path)
+                }}
+                onClickRun={() => {
+                    props.onClickRun?.(item, path)
+                }}
+                onRefreshRoot={props.onRefreshRoot}
+            />}
+        />}
+    />
 }
 
 async function runCase(session: Session, item: TestingStatItem, controller: ItemController<TestingStatItem>, runLimited: (item: TestingItem, e: Options) => Promise<RunStatus>, notifyUpdate: () => void) {
@@ -459,8 +578,10 @@ function filterItems(items: TestingStatItem[], showFailOnly: boolean, showSkipOn
     //     return true
     // })
 }
-export interface ItemRenderProps {
-    item: TestingStatItem, controller: ItemController<TestingStatItem>
+
+export interface ItemRenderV2Props {
+    item: TestingStatItem,
+    controller?: ItemController<TestingStatItem>
 
     showEditActions?: boolean
 
@@ -474,9 +595,18 @@ export interface ItemRenderProps {
     onRefreshRoot?: () => void
 }
 
+export interface ItemRenderProps extends ItemRenderV2Props {
+
+}
+
 export function ItemRender(props: ItemRenderProps) {
-    const { item, controller, api, onTreeChangeRequested, showEditActions } = props
-    const isRoot = controller && controller.path.length <= 1
+    return <ItemRenderV2 {...props} isRoot={props.isRoot || (props.controller && props.controller.path.length <= 1)} />
+}
+
+export function ItemRenderV2(props: ItemRenderV2Props) {
+    let controller: ItemController<TestingStatItem> = props.controller
+    const { item, api, onTreeChangeRequested, showEditActions } = props
+    const isRoot = props.isRoot
 
     const total = useMemo(() => getTotal(item.counters), [item.counters])
 
@@ -511,7 +641,7 @@ export function ItemRender(props: ItemRenderProps) {
             className="testing-item-menu"
             style={{
                 marginLeft: "auto",
-                display: props.isRoot ? "flex" : undefined /* if root ,override display:none; otherwise use display:none */,
+                display: isRoot ? "flex" : undefined /* if root ,override display:none; otherwise use display:none */,
                 flexWrap: "nowrap",
                 alignItems: 'center'
             }} >

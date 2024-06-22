@@ -4,8 +4,6 @@ set -eo pipefail
 rm -rf src/open/build
 npx webpack --config src/open/webpack.config.web.js --progress --mode=production
 
-rm -rf src/open/npm-publish
-
 mkdir -p src/open/npm-publish
 
 # NOTE: should update version

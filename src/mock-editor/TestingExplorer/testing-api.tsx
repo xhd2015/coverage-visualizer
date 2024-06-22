@@ -1,6 +1,7 @@
 import axios, { AxiosRequestConfig } from "axios"
 import { MockInfo, TestingCase, TestingRequestV2, TestingResponseV2 } from "./testing"
 import { map, traverse } from "../tree"
+import { TestingItemState } from "./TestingList"
 
 
 export interface API {
@@ -79,7 +80,10 @@ export interface MethodCase {
 export type TestingItemType = "dir" | "file" | "testSite" | "case"
 
 export interface TestingItem {
+    key: string
     name: string
+    baseCaseName?: string
+    nameUnderPkg?: string
     kind: TestingItemType
 
     file?: string
@@ -94,6 +98,7 @@ export interface TestingItem {
 
     relPath?: string
 
+    state?: TestingItemState
     children?: TestingItem[]
 }
 

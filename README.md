@@ -116,3 +116,6 @@ Work still in progress, currently the default golang coverage visualizer is impl
 # Code Guidelines
 1. no default export
 2. prefer verbose syntax instead of one-liner code
+
+# Components
+[open: xgo test-explorer](./src/open/) - publish test explorer for the xgo project.

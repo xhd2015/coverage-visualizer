@@ -31,10 +31,10 @@ export default function ToolBar(props: ToolBarProps) {
           setVal(e.target.value);
           const val = e.target.value;
           if (val) {
-            props.searchFile(val);
+            props.searchFile?.(val);
           } else {
-            props.searchFile(val);
-            props.onToggleExpand(Number(MAX_NODE_DEPTH));
+            props.searchFile?.(val);
+            props.onToggleExpand?.(Number(MAX_NODE_DEPTH));
           }
         }}
         allowClear
@@ -42,10 +42,10 @@ export default function ToolBar(props: ToolBarProps) {
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             if (val) {
-              props.searchFile(val);
+              props.searchFile?.(val);
             } else {
-              props.searchFile(val);
-              props.onToggleExpand(Number(MAX_NODE_DEPTH));
+              props.searchFile?.(val);
+              props.onToggleExpand?.(Number(MAX_NODE_DEPTH));
             }
           }
         }}
@@ -55,14 +55,10 @@ export default function ToolBar(props: ToolBarProps) {
           value={level}
           onChange={(v) => {
             setLevel(Number(v));
-            props.onToggleExpand(Number(v));
+            props.onToggleExpand?.(Number(v));
           }}
           dropdownMatchSelectWidth={false}
           options={[
-            {
-              value: MAX_NODE_DEPTH,
-              label: toolBarExpandAll.getText(languages),
-            },
             {
               value: 1,
               label: toolBarExpand1.getText(languages),
@@ -74,6 +70,10 @@ export default function ToolBar(props: ToolBarProps) {
             {
               value: 3,
               label: toolBarExpand3.getText(languages),
+            },
+            {
+              value: MAX_NODE_DEPTH,
+              label: toolBarExpandAll.getText(languages),
             },
           ]}
         />

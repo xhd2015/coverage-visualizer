@@ -1,3 +1,18 @@
+# Workflow
+1.Build
+ - command: `npm run build-open`
+ - this command will generate  `src/open/npm-publish` and other resources
+
+2.Verify
+ - command: `npm run serve-open`
+ - serving files under src/open, so you can import js files via `http://localhost:8080/build/index.js`
+
+
+3.Publish
+ - Increment version.js if necessary
+ - Build: `npm run build-open`
+ - Publish: `cd src/open/npm-publish && npm publish`
+
 # Usage
 Build
 ```sh

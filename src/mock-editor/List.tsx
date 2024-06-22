@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useMemo, useState } from "react"
+import { CSSProperties, memo, useEffect, useMemo, useState } from "react"
 import { useCurrent } from "./react-hooks"
 
 // the core implementation of a nested list
@@ -47,47 +47,61 @@ export interface Item {
 export interface ListItemsProps<T extends Item> extends ListProps<T> {
 }
 
+const isDev = process.env["NODE_ENV"] === "development"
 export function ListItems<T extends Item>(props: ListItemsProps<T>) {
     // check keys
-    const checkKeys = true
+    const checkKeys = isDev
     if (checkKeys) {
         const keys = {}
-        props.items?.forEach(e => {
+        props.items?.forEach?.(e => {
             if (e.key === undefined) {
-                console.error("WARNING item no key:", e.key)
+                console.error("WARNING item no key:", e)
                 return
             }
             if (keys[e.key]) {
-                console.error("WARNING duplicate key:", e.key)
+                console.error("WARNING duplicate key:", e)
                 return
             }
             keys[e.key] = true
         })
     }
-    return <>{
-        props.items?.map?.(item => <ListItem
-            // !!!! a bug that needs to be noted here:
-            // I forgot to add the `key`(which should be unique)
-            // caused me 3 hours from 22:00 to 01:00 to locate it
-            // this is really a lesson taught by React, thank you, React!(b*tch)
-            //
-            // key: if keys are the same, then the children may be incorrectly mapped.
-            // using index as key is not a good practice here.
-            key={item.key}
-            // !!!!
 
-            item={item}
-            parentPath={props.parentPath}
-            render={props.render}
-            getSubscribeUpdate={props.getSubscribeUpdate}
-        />)
-    }</>
+    // must return single component
+    return <>{props.items?.map?.(item => <ListItemMemo
+        // !!!! a bug that needs to be noted here:
+        // I forgot to add the `key`(which should be unique)
+        // caused me 3 hours from 22:00 to 01:00 to locate it
+        // this is really a lesson taught by React, thank you, React!(b*tch)
+        //
+        // key: if keys are the same, then the children may be incorrectly mapped.
+        // using index as key is not a good practice here.
+        key={item.key}
+        // !!!!
+
+        item={item}
+        parentPath={props.parentPath}
+        render={props.render}
+        getSubscribeUpdate={props.getSubscribeUpdate}
+    />)
+    }    </>
 }
+
+const ListItemMemo = memo(ListItem, (prev, next) => {
+    if (prev.item !== next.item) {
+        return false
+    }
+    if (!isSamePath(prev.parentPath, next.parentPath)) {
+        return false
+    }
+    return true
+})
 
 export interface ListItemProps<T extends Item> {
     item?: T
     parentPath?: ItemPath
     render?: ListItemsProps<T>["render"]
+    // getSubscribeUpdate: subscribe update
+    // newer code should not use it anymore, to keep the list pure data driven
     getSubscribeUpdate?: (item: T, path: ItemPath) => SubscribeUpdate<T>
 }
 export function ListItem<T extends Item>(props: ListItemProps<T>) {
@@ -128,7 +142,11 @@ export function ListItem<T extends Item>(props: ListItemProps<T>) {
     // reactive to prop change
     useEffect(() => setItem(props.item), [props.item])
 
-    return !item.hide && <li key={item.key} style={item.itemStyle} className={item.itemClassName}>
+    if (item.hide) {
+        return null
+    }
+
+    return <li key={item.key} style={item.itemStyle} className={item.itemClassName}>
         {props.render?.(item, itemPath)}
         {
             !item.hideList && <List
@@ -141,4 +159,21 @@ export function ListItem<T extends Item>(props: ListItemProps<T>) {
             />
         }
     </li>
+}
+
+export function isSamePath(a: ItemPath, b: ItemPath): boolean {
+    if (a === b) {
+        return true
+    }
+    const alen = a?.length || 0
+    const blen = b?.length || 0
+    if (alen !== blen) {
+        return false
+    }
+    for (let i = 0; i < alen; i++) {
+        if (a[i] !== b[i]) {
+            return false
+        }
+    }
+    return true
 }

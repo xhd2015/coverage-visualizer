@@ -1,13 +1,16 @@
 import { CSSProperties, useEffect, useMemo, useRef, useState } from "react"
-import { Options, RunItem, Session, SessionRunner, TestingAPI, TestingList, UpdateCallback } from "../TestingList"
-import { TestingItem } from "../testing-api"
 import { GridLayout } from "../../../support/components/layout/GridLayout"
-import { XgoTestDetail } from "./XgoTestDetail"
-import { randList } from "../TestingList/TestingListDemo"
-import { RunStatus } from "../testing"
-import { fetchContent, newSessionRunner, requestRunPoll, requestRun, useUrlData, useUrlRun } from "./http-data"
-import { useCurrent } from "../../react-hooks"
 import { useLoading } from "../../../support/hook/useLoading"
+import { ItemPath } from "../../List"
+import { Options, RunItem } from "../TestingList"
+import { randList } from "../TestingList/TestingListDemo"
+import { StatusFilter, TestingListWithToolbar } from "../TestingList/TestingListWithToolbar"
+import { findDataAndPath, getDataByPath, patchSubStree, updateState, updateSubTree } from "../TestingList/util"
+import { RunStatus } from "../testing"
+import { TestingItem } from "../testing-api"
+import { XgoTestDetail } from "./XgoTestDetail"
+import { Event, fetchContent, requestRunPoll, useUrlData } from "./http-data"
+import { fillTestingItem, filterData, replaceDataMergingState, setSelect, toggleExpand } from "./util"
 
 export interface RunDetailResult {
     status: RunStatus
@@ -18,17 +21,21 @@ export interface XgoTestingExplorerProps {
     style?: CSSProperties
     className?: string
 
-    runLimit?: number
-
-    data?: TestingItem[]
-    onRefreshRoot?: () => void
+    data?: TestingItem
 
     fetchContent?: (selectedItem: TestingItem) => Promise<string>
-    runItem?: RunItem
-    runner?: SessionRunner
 
-    runItemDetail?: (item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>) => Promise<void>
-    debugItemDetail?: (item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>) => Promise<void>
+    statusFilter?: StatusFilter
+    onChangeStatusFilter?: (filter: StatusFilter) => void
+    onSearch?: (search: string) => void
+    onToggleExpand?: (depth: number) => void
+
+    onClickExpand?: (item: TestingItem, path: ItemPath, expand: boolean) => void
+    onClickItem?: (item: TestingItem, path: ItemPath) => void
+    runItemDetail?: (item: TestingItem, itemPath: ItemPath) => (Promise<void> | void)
+    onRefreshRoot?: () => void
+
+    debugItemDetail?: (item: TestingItem, itemPath: ItemPath) => (Promise<void> | void)
 
     openVscode?: (item: TestingItem) => void
     openGoland?: (item: TestingItem) => void
@@ -37,12 +44,18 @@ export interface XgoTestingExplorerProps {
 
 // design:
 //   allow dynamically add test cases while running
+// 
+// data driven:
+//   the explorer is completely data driven
+//   every case has associated data, including:
+//      status: not run, running, skip, fail, error
+//      log
+//      
 export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
-    const [selectedItem, setSelectedItem] = useState<TestingItem>()
-    const logMapping = useRef<Record<string, string>>({})
+    const data = props.data || ({ key: "/", name: "/" } as TestingItem)
+    const [selectedItem, selectedItemPath] = useMemo(() => findDataAndPath(data, e => e.state?.selected), [data])
 
     const [content, setContent] = useState("")
-    const [log, setLog] = useState("")
 
     const refreshContent = async (selectedItem: TestingItem) => {
         if (props.fetchContent != null) {
@@ -52,26 +65,14 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
     useEffect(() => {
         if (!selectedItem) {
             setContent("")
-            setLog("")
             return
         }
         if (selectedItem.kind === "case") {
-            const log = logMapping.current[`${selectedItem.file}:${selectedItem.name}`]
-            setLog(log)
-
             refreshContent(selectedItem)
         } else {
-            setLog("")
             setContent("")
         }
     }, [selectedItem])
-
-    const [detailRunning, clickRunDetail] = useLoading(async () => {
-        await props.runItemDetail?.(selectedItem, setLog)
-    })
-    const [debugging, clickDebug] = useLoading(async () => {
-        await props.debugItemDetail?.(selectedItem, setLog)
-    })
 
     const clickVscode = async () => {
         await props.openVscode?.(selectedItem)
@@ -104,26 +105,39 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
             }
         }}
         childrenMapping={{
-            "testingList": <TestingList
-                data={props.data}
-                showEditActions={false}
-                runLimit={props.runLimit}
-                api={{
-                    ...({} as TestingAPI),
-                    run: props.runItem,
+            "testingList": <TestingListWithToolbar<TestingItem>
+                data={data}
+                statusFilter={props.statusFilter}
+                onChangeStatusFilter={props.onChangeStatusFilter}
+                onSearch={props.onSearch}
+                onToggleExpand={props.onToggleExpand}
+                buildListItem={fillTestingItem}
+                onClickExpand={(item, path, expand) => {
+                    const testItem = getDataByPath(data, path.slice(1))
+                    props.onClickExpand?.(testItem, path, expand)
+                }}
+                onClickItem={(item, path) => {
+                    const testItem = getDataByPath(data, path.slice(1))
+                    props.onClickItem?.(testItem, path)
+                }}
+                onClickRun={(item, path) => {
+                    const testItem = getDataByPath(data, path.slice(1))
+                    props.runItemDetail?.(testItem, path)
                 }}
                 onRefreshRoot={props.onRefreshRoot}
-                onSelectChange={item => setSelectedItem(item)}
-                runner={props.runner}
             />,
             "testingDetail": <XgoTestDetail
                 item={selectedItem}
                 content={content}
-                log={log}
-                onClickRun={clickRunDetail}
-                running={detailRunning}
-                onClickDebug={clickDebug}
-                debugging={debugging}
+                log={selectedItem?.state?.logs}
+                onClickRun={() => {
+                    props.runItemDetail?.(selectedItem, selectedItemPath)
+                }}
+                running={selectedItem != null && !selectedItem.state.debugging && selectedItem.state.status === "running"}
+                onClickDebug={() => {
+                    props.debugItemDetail?.(selectedItem, selectedItemPath)
+                }}
+                debugging={selectedItem != null && selectedItem.state.debugging && selectedItem.state.status === "running"}
                 onClickVscode={clickVscode}
                 onClickGoland={clickGoland}
                 copyText={selectedItem && props.copyText && props.copyText(selectedItem)}
@@ -139,10 +153,21 @@ export interface UrlXgoTestingExplorerProps extends XgoTestingExplorerProps {
 
 export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     const apiPrefix = props.apiPrefix || ''
-    const { data, refresh } = useUrlData(`${apiPrefix}/list`)
-    const run = useUrlRun(`${apiPrefix}/run`)
 
-    const runner = useMemo(() => newSessionRunner(`${apiPrefix}/session/start`, `${apiPrefix}/session/pollStatus`), [])
+    // TODO: make list return single list
+    const { data: serverData, refresh } = useUrlData(`${apiPrefix}/list`)
+
+    const [data, setData] = useState(serverData)
+    useEffect(() => setData(prev => {
+        replaceDataMergingState(prev, serverData)
+        return serverData
+    }), [serverData])
+
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>(StatusFilter.All)
+    const [search, setSearch] = useState("")
+    useEffect(() => {
+        setData(data => filterData(data, statusFilter, search))
+    }, [statusFilter, search])
 
     const open = async (item: TestingItem, url: string) => {
         const params = new URLSearchParams({ file: item.file, line: String(item.line) }).toString()
@@ -151,16 +176,26 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     return <XgoTestingExplorer {...props}
         data={data}
         onRefreshRoot={refresh}
-        runItem={run}
-        runner={runner}
-        fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
-        runItemDetail={async (item, setLog) => {
-            setLog("")
-            await requestRunPoll(`${apiPrefix}/run`, `${apiPrefix}/run/pollStatus`, item, setLog)
+        onClickItem={(item, path) => {
+            setData(data => setSelect(data, path))
         }}
-        debugItemDetail={async (item, setLog) => {
-            setLog("")
-            await requestRunPoll(`${apiPrefix}/debug`, `${apiPrefix}/debug/pollStatus`, item, setLog)
+        statusFilter={statusFilter}
+        onChangeStatusFilter={setStatusFilter}
+        onSearch={search => {
+            setSearch(search)
+        }}
+        onClickExpand={(item, path, expand) => {
+            setData(data => updateState(data, path.slice(1), e => e.expanded = expand))
+        }}
+        onToggleExpand={depth => {
+            setData(data => toggleExpand(data, depth))
+        }}
+        fetchContent={item => fetchContent(`${apiPrefix}/detail`, item)}
+        runItemDetail={(item, path) => {
+            runItem(item, path, apiPrefix, false, setData)
+        }}
+        debugItemDetail={async (item, path) => {
+            runItem(item, path, apiPrefix, true, setData)
         }}
 
         openVscode={async item => {
@@ -179,6 +214,61 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     />
 }
 
+function runItem(item: TestingItem, path: ItemPath, apiPrefix: string, debug: boolean, setData: React.Dispatch<React.SetStateAction<TestingItem>>) {
+    setData(data => {
+        return updateState(data, path.slice(1), e => e.debugging = debug)
+    })
+    setData(data => {
+        return updateSubTree(data, path.slice(1), e => ({ ...e, state: { ...e.state, status: "running", logs: "" } }))
+    })
+    requestRunPoll(`${apiPrefix}/session/start`, `${apiPrefix}/session/pollStatus`, { item, path, debug }, {
+        onEvent(e) {
+            if (!e.path?.length) {
+                return
+            }
+            if (e.event === Event.MergeTree) {
+                setData(data => patchSubStree(data, e.path.slice(1), e.item, (data, patch) => {
+                    return { ...data, state: { ...data?.state, ...patch?.state } }
+                }))
+            }
+            setData(data => updateState(data, e.path.slice(1), state => {
+                if (e.event === Event.ItemStatus) {
+                    if ((e.status as string) !== "") {
+                        state.status = e.status
+                    }
+                }
+                const msg = e.msg || ""
+                if (msg) {
+                    state.logs = (state.logs || "") + msg
+                    if (!msg.endsWith("\n")) {
+                        state.logs += "\n"
+                    }
+                }
+            }, { optional: true }))
+        },
+        onEnd(err) {
+            if (err != null) {
+                setData(data => updateState(data, path.slice(1), e => {
+                    e.status = "error"
+                    if (err.message !== "") {
+                        e.logs += err.message + "\n"
+                    }
+                }))
+            }
+            // transfer to finite status
+            setData(data => {
+                return updateSubTree(data, path.slice(1), e => ({ ...e, state: { ...e.state, status: toFiniteStatus(e.state?.status) } }))
+            })
+        }
+    })
+}
+
+function toFiniteStatus(status: RunStatus): RunStatus {
+    if (status !== "running") {
+        return status
+    }
+    return "error"
+}
 export function useRandomRun(): RunItem {
     return async function (item: TestingItem, opts: Options): Promise<RunStatus> {
         return new Promise((resolve) => {

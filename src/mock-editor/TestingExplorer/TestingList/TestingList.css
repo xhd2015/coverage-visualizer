@@ -30,6 +30,6 @@
     white-space: nowrap;
     margin-left: 2px;
     overflow: hidden;
-    max-width: 10em;
+    max-width: 20em;
     text-overflow: ellipsis;
 }

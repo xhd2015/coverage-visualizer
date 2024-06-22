@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import { RunStatus } from "../testing"
 import { TestingItem } from "../testing-api"
 import { Options, RunItem, Session, SessionRunner, UpdateCallback } from "../TestingList"
+import { traverse } from "../../tree"
+import { ItemPath } from "../../List"
 
 export async function requestPoll(url: string, pollURL: string, body: any, callback: (err: Error, events: ItemEvent[]) => boolean): Promise<void> {
     const resp = await fetch(url, {
@@ -15,28 +17,36 @@ export async function requestPoll(url: string, pollURL: string, body: any, callb
     const sessionResult: StartSessionResult = await resp.json()
     const sessionID = sessionResult.id
 
-    await pollStatus(pollURL, sessionID, callback)
+    await pollStatus(pollURL, sessionID, sessionResult.pollIntervalMS, callback)
 }
 
-// poll every 500ms
-async function pollStatus(pollEventURL: string, sessionID: string, callback: (err: Error | undefined, events: ItemEvent[]) => boolean) {
+// poll every 200ms
+async function pollStatus(pollEventURL: string, sessionID: string, pollIntervalMS: number, callback: (err: Error | undefined, events: ItemEvent[]) => boolean) {
+    if (!(pollIntervalMS > 0)) {
+        pollIntervalMS = 200
+    }
     const body = JSON.stringify({ id: sessionID })
     let init = true
     while (true) {
         if (!init) {
-            await sleep(500)
+            await sleep(pollIntervalMS)
         } else {
             init = false
         }
         try {
             const resp = await fetch(pollEventURL, { method: "POST", body })
             if (resp.status !== 200) {
-                console.log("poll err:", await resp.text())
+                if (callback(new Error(await resp.text()), null)) {
+                    return
+                }
                 continue
             }
             const pollResult: PollSessionResult = await resp.json()
             if (pollResult == null || pollResult.events == null) {
                 continue
+            }
+            if (pollResult.pollIntervalMS > 0) {
+                pollIntervalMS = pollResult.pollIntervalMS
             }
             if (callback(null, pollResult.events)) {
                 return
@@ -62,24 +72,44 @@ export async function requestRun(url: string, item: TestingItem, opts?: { verbos
     return await resp.json()
 }
 
-export async function requestRunPoll(url: string, pollURL: string, item: TestingItem, setLog: React.Dispatch<React.SetStateAction<string>>, opts?: {}): Promise<void> {
+export async function requestRunPoll(url: string, pollURL: string, body: any, opts?: {
+    appendLog?: (log: string) => void
+    onEnd?: (err: Error | undefined) => void
+    onEvent?: (event: ItemEvent) => void
+}): Promise<void> {
     let fails = 0
-    await requestPoll(url, pollURL, { item }, (err, events) => {
+    await requestPoll(url, pollURL, body, (err, events) => {
         if (err != null) {
+            opts?.appendLog?.("poll err: " + err.message + "\n")
             fails++
-            if (fails > 10) {
-                throw err
+            if (fails <= 10) {
+                return false
             }
-            setLog(log => log + "poll err: " + err.message + "\n")
-            return false
+            if (opts?.onEnd) {
+                opts.onEnd(err)
+                return true
+            }
+            throw err
         }
         fails = 0
         for (const e of events) {
+            if (e.logConsole) {
+                console.log("DEBUG event:", e)
+            }
+            if (opts?.onEvent) {
+                opts?.onEvent(e)
+            }
             if (e.event === Event.TestEnd) {
+                opts?.onEnd?.(null)
                 return true
             }
             if (e.msg != null && e.msg !== '') {
-                setLog(log => log + e.msg + "\n")
+                if (opts?.appendLog) {
+                    opts?.appendLog?.(e.msg)
+                    if (!e.msg.endsWith("\n")) {
+                        opts?.appendLog?.("\n")
+                    }
+                }
             }
         }
         return false
@@ -87,29 +117,57 @@ export async function requestRunPoll(url: string, pollURL: string, item: Testing
 }
 
 export async function fetchContent(url: string, selectedItem: TestingItem): Promise<string> {
+    let name = selectedItem.name
+    if (selectedItem.baseCaseName) {
+        name = selectedItem.baseCaseName
+    }
     const resp = await fetch(url + "?" + new URLSearchParams({
         file: selectedItem.file,
-        name: selectedItem.name,
+        name: name,
     }).toString())
     const data = await resp.json()
     return data.content
 }
 
-export function useUrlData(url: string): { data: TestingItem[], refresh: () => void } {
-    const [data, setData] = useState<TestingItem[]>()
+export function useUrlData(url: string): { data: TestingItem, refresh: () => void } {
+    const [data, setData] = useState<TestingItem>()
 
     const refresh = async () => {
         const resp = await fetch(url)
-        const data = await resp.json()
-        setData(data)
+        const data: TestingItem[] | TestingItem = await resp.json()
+
+        const rootData = makeSingleRoot(data)
+        fillKeys(rootData)
+        setData(rootData)
+
     }
-    useEffect(() => {
+    useMemo(() => {
         refresh()
     }, [])
 
     return { data, refresh }
 }
 
+function fillKeys(data: TestingItem) {
+    traverse([data], e => {
+        if (e.key == null) {
+            e.key = e.name
+        }
+    })
+}
+function makeSingleRoot(data: TestingItem[] | TestingItem): TestingItem {
+    if (data == null) {
+        return { key: "/", name: "/", kind: "dir" }
+    }
+    if (!Array.isArray(data)) {
+        // new API returns single root
+        return data
+    }
+    if (data.length === 1) {
+        return data[0]
+    }
+    return { key: "/", name: "/", children: data, kind: "dir" }
+}
 
 export function useUrlRun(url: string): RunItem {
     return async function (item: TestingItem, opts: Options): Promise<RunStatus> {
@@ -125,9 +183,10 @@ async function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-enum Event {
-    ItemStatus = "item_status",
+export enum Event {
     TestStart = "test_start",
+    ItemStatus = "item_status",
+    MergeTree = "merge_tree",
     TestEnd = "test_end",
 }
 
@@ -136,16 +195,20 @@ interface StartSessionRequest extends TestingItem {
 }
 interface StartSessionResult {
     id: string
+    pollIntervalMS: number
 }
 
-interface ItemEvent {
+export interface ItemEvent {
     event: Event
-    item: TestingItem
+    item: TestingItem // deprecated
+    path: ItemPath
     status: RunStatus
     msg?: string
+    logConsole?: boolean
 }
 interface PollSessionResult {
     events: ItemEvent[]
+    pollIntervalMS?: number
 }
 export function newSessionRunner(startSessionURL: string, pollEventURL: string): SessionRunner {
     return {
