@@ -56,9 +56,8 @@ export function ItemDetail(props: XgoTestDetailProps) {
     if (item.kind !== "case") {
         return <div>
             {item.file}
-
             {item.state?.logs &&
-                <TextEditor containerStyle={{ height: "80%" }} style={{ height: "100%" }} value={item.state?.logs} readonly />
+                <TextEditor style={{ height: "400px" }} value={item.state?.logs} readonly />
             }
         </div>
     }

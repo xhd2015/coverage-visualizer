@@ -626,7 +626,7 @@ export function ItemRenderV2(props: ItemRenderV2Props) {
         onClick={props.onClick}
     >
         <RenderStatus status={item?.status} style={{}} />
-        <div className="testing-item-name">{renderItemName(item)}</div>
+        <div className={`testing-item-name ${isRoot ? "root" : ""}`} style={{}}>{renderItemName(item)}</div>
         {treatLikeFolder(item) && <RenderCounter
             status={item.status}
             key={item.record.name}

@@ -33,3 +33,7 @@
     max-width: 20em;
     text-overflow: ellipsis;
 }
+
+.testing-item-name.root {
+    max-width: 10em;
+}
