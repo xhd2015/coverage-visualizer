@@ -1,4 +1,4 @@
-import { Button } from "antd"
+import { Button, Checkbox } from "antd"
 import { CSSProperties, useEffect, useState } from "react"
 import { AiOutlineReload } from "react-icons/ai"
 import { BsFileEarmarkCheck } from "react-icons/bs"
@@ -12,6 +12,7 @@ import CopyClipboard from "../../support/CopyClipboard"
 import Icon from "../../support/Icon"
 import { TestingItem } from "../testing-api"
 import { RunStatus } from "../testing"
+import { TraceExplorer, TraceExplorerProps } from "../../../trace/TraceExplorer"
 
 export interface XgoTestDetailProps {
     style?: CSSProperties
@@ -20,6 +21,9 @@ export interface XgoTestDetailProps {
     item?: TestingItem
     content?: string
     log?: string
+
+    trace?: boolean
+    onTraceChange?: React.Dispatch<React.SetStateAction<boolean>>
 
     onClickRun?: () => void
     onClickDebug?: () => void
@@ -30,6 +34,9 @@ export interface XgoTestDetailProps {
     running?: boolean
 
     debugging?: boolean
+
+    showTrace?: boolean
+    shownTraceProps?: TraceExplorerProps
 }
 
 // debug with trace enabled
@@ -48,6 +55,7 @@ function getStatusColor(status: RunStatus): string | undefined {
     }
     return undefined
 }
+
 export function ItemDetail(props: XgoTestDetailProps) {
     const item = props.item
     if (item == null) {
@@ -64,7 +72,7 @@ export function ItemDetail(props: XgoTestDetailProps) {
 
     const disableButtons = !!(props.running || props.debugging)
 
-    return <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    return <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
         <div style={{ marginBottom: "2px" }}>
             <AiOutlineReload style={{ cursor: "pointer", }}
                 onClick={props.onClickRefresh} />
@@ -85,11 +93,43 @@ export function ItemDetail(props: XgoTestDetailProps) {
             <div style={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%", display: "flex", alignItems: "center", justifyContent: "flex-start", height: "100%" }}>
                 <ExpandActions>
                     <Button onClick={props.onClickDebug} loading={props.debugging} disabled={disableButtons} size="middle" >Debug</Button>
+                    <TraceCheckbox value={props.trace} onChange={props.onTraceChange} />
                 </ExpandActions>
             </div>
-
         </div>
         <TextEditor containerStyle={{ flexGrow: 1, flexShrink: 1, flexBasis: "50%" }} style={{ height: "100%" }} value={props.log} readonly />
+
+        {
+            props.showTrace && <>
+                <label>Trace</label>
+                <div style={{
+                    //  flexShrink: 1, flexBasis: "100px",
+                    height: "10%",
+                }}>
+                    <TraceExplorer {...props.shownTraceProps} />
+                </div>
+            </>
+        }
+    </div>
+}
+
+export interface TraceCheckboxProps {
+    style?: CSSProperties
+    className?: string
+
+    value?: boolean
+    onChange?: React.Dispatch<React.SetStateAction<boolean>>
+}
+
+export function TraceCheckbox(props: TraceCheckboxProps) {
+    return <div style={{
+        display: "inline-flex",
+        height: "100%",
+        alignItems: "center",
+        marginLeft: "4px",
+    }}>
+        <Checkbox style={{ marginTop: "-4px" }} checked={props.value} onChange={e => props.onChange?.(e.target.checked)}></Checkbox>
+        <span style={{ marginLeft: "2px", cursor: "pointer" }} onClick={() => props.onChange?.(e => !e)}>Trace</span>
     </div>
 }
 

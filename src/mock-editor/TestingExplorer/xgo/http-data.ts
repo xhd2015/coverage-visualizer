@@ -4,6 +4,7 @@ import { TestingItem } from "../testing-api"
 import { Options, RunItem, Session, SessionRunner, UpdateCallback } from "../TestingList"
 import { traverse } from "../../tree"
 import { ItemPath } from "../../List"
+import { CallRecord } from "../TestingExplorerEditor/TraceList/trace-types"
 
 export async function requestPoll(url: string, pollURL: string, body: any, callback: (err: Error, events: ItemEvent[]) => boolean): Promise<void> {
     const resp = await fetch(url, {
@@ -186,7 +187,13 @@ async function sleep(ms: number) {
 export enum Event {
     TestStart = "test_start",
     ItemStatus = "item_status",
+
+    // Emited when dynamic sub tests run
     MergeTree = "merge_tree",
+
+    // trace
+    UpdateTrae = "update_trace",
+
     TestEnd = "test_end",
 }
 
@@ -205,6 +212,9 @@ export interface ItemEvent {
     status: RunStatus
     msg?: string
     logConsole?: boolean
+
+    // valid when event == update_trace
+    traceRecords?: CallRecord[]
 }
 interface PollSessionResult {
     events: ItemEvent[]

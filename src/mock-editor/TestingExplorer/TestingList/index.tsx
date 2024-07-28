@@ -18,6 +18,7 @@ import { throttle } from "../../util/throttle"
 import { allStatus, RunStatus } from "../testing"
 import { TestingItem, TestingItemType } from "../testing-api"
 import "./TestingList.css"
+import { CallRecord } from "../TestingExplorerEditor/TraceList/trace-types"
 
 export type StateCounters = Record<RunStatus, number>
 
@@ -325,6 +326,9 @@ export interface TestingItemState {
     debugging?: boolean
     logs?: string
     counters?: any // sub status
+
+    showTrace?: boolean
+    traceRecords?: CallRecord[]
 
     // hide type
     hideType?: HideType

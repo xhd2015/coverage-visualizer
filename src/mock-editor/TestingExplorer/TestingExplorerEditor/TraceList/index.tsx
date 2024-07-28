@@ -39,10 +39,12 @@ export interface TraceListProps {
     records?: CallRecord[]
     className?: string
 
-
-    autoSelectFirst?: boolean
     // style for the root container
     style?: CSSProperties
+
+    disableMockCheckbox?: boolean
+
+    autoSelectFirst?: boolean
 
     getMockProperty?: (e: CallRecord) => { needMock?: boolean, mocked?: boolean }
 
@@ -207,7 +209,9 @@ export default function (props: TraceListProps) {
                 toggleExpandRef.current?.()
             }} />
             <Checkbox label="Error" value={showErrOnly} onChange={setShowErrOnly} style={{ marginLeft: "4px" }} />
-            <Checkbox label="Mock" value={showMockOnly} onChange={setShowMockOnly} style={{ marginLeft: "4px" }} />
+            {
+                !props.disableMockCheckbox && <Checkbox label="Mock" value={showMockOnly} onChange={setShowMockOnly} style={{ marginLeft: "4px" }} />
+            }
         </div>
         <ExpandList<CallRecordItem>
             items={items}

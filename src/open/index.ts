@@ -4,8 +4,9 @@ import { createRoot } from "react-dom/client";
 import 'antd/dist/antd.min.css';
 import 'bootstrap/dist/css/bootstrap.min.css'; // with this, page looks better
 import "./index.css";
+import { UrlXgoTestingExplorer } from '../mock-editor/TestingExplorer/xgo/UrlXgoTestingExplorer';
 
-import { UrlXgoTestingExplorer } from '../mock-editor/TestingExplorer/xgo';
+// import { UrlXgoTestingExplorer } from '../mock-editor/TestingExplorer/xgo';
 
 export function renderReact(el: HTMLElement, component: (props) => JSX.Element, props?) {
     createRoot(el).render(React.createElement(component, props))

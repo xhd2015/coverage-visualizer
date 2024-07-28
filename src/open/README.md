@@ -7,8 +7,8 @@
  - make your index.html refer to `http://localhost:8080/build/index.js`
 
 3. Build
- - Once development and verify complete, can proceed with next steps
- - Increment version.js
+ - Once development and verify complete, can proceed to next steps
+ - Increment `version.js`
  - build: `npm run build-open`
  - this command will generate  `src/open/npm-publish` and other resources
 

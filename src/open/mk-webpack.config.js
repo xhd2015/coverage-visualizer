@@ -5,6 +5,8 @@ const CopyPlugin = require("copy-webpack-plugin")
 const webpack = require("webpack")
 const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin
 
+// usage:
+//
 // rootDir: contains node_modules
 // buildDir: output of build
 // opts: { alias: alias map, publicPath }
@@ -101,10 +103,12 @@ function makeConfig(entry, rootDir, buildDir, opts) {
             alias: {
                 ...opts?.alias,
             },
-            extensions: [".tsx", ".ts", "jsx", ".js"],
+            extensions: [".tsx", ".ts", ".jsx", ".js"],
             fallback: {
                 // util: require.resolve("util/"),
                 crypto: require.resolve("crypto-browserify"),
+                path: require.resolve("path-browserify"),
+                fs: false,
                 stream: false,
             },
         },
