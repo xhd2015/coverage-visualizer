@@ -108,6 +108,8 @@ function makeConfig(entry, rootDir, buildDir, opts) {
                 // util: require.resolve("util/"),
                 crypto: require.resolve("crypto-browserify"),
                 path: require.resolve("path-browserify"),
+                buffer: require.resolve("buffer/"),
+                assert: require.resolve("assert/"),
                 fs: false,
                 stream: false,
             },

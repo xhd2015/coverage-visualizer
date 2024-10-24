@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useMemo, useState } from "react"
+import { CSSProperties, useEffect, useMemo, useState, Dispatch, SetStateAction } from "react"
 import { GridLayout } from "../../../support/components/layout/GridLayout"
 import { TraceExplorerProps } from "../../../trace/TraceExplorer"
 import { ItemPath } from "../../List"
@@ -11,6 +11,7 @@ import { TestingItem } from "../testing-api"
 import { XgoTestDetail } from "./XgoTestDetail"
 import { fillTestingItem } from "./util"
 import { TraceItem } from "../TestingExplorerEditor/types"
+import { CoverageLineProps } from "./Coverage"
 
 export interface RunDetailResult {
     status: RunStatus
@@ -24,10 +25,10 @@ export interface XgoTestingExplorerProps {
     data?: TestingItem
 
     trace?: boolean
-    onTraceChange?: React.Dispatch<React.SetStateAction<boolean>>
+    onTraceChange?: Dispatch<SetStateAction<boolean>>
 
     selectedTraceRecord?: TraceItem
-    setSelectedTraceRecord?: (value: React.SetStateAction<TraceItem>) => void
+    setSelectedTraceRecord?: (value: SetStateAction<TraceItem>) => void
 
     fetchContent?: (selectedItem: TestingItem) => Promise<string>
 
@@ -46,6 +47,8 @@ export interface XgoTestingExplorerProps {
     openVscode?: (item: TestingItem) => void
     openGoland?: (item: TestingItem) => void
     copyText?: (item: TestingItem) => string
+
+    coverage?: CoverageLineProps
 }
 
 // design:
@@ -91,7 +94,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
         refreshContent(selectedItem)
     }
 
-    console.log("selectedItem:", selectedItem?.relPath, selectedItem?.state?.showTrace)
+    // console.log("selectedItem:", selectedItem?.relPath, selectedItem?.state?.showTrace)
 
     return <GridLayout
         style={{
@@ -159,6 +162,7 @@ export function XgoTestingExplorer(props: XgoTestingExplorerProps) {
                 onClickGoland={clickGoland}
                 copyText={selectedItem && props.copyText && props.copyText(selectedItem)}
                 onClickRefresh={clickRefresh}
+                coverage={props.coverage}
             />
         }}
     />

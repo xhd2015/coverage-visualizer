@@ -1,5 +1,5 @@
 import { Button, Checkbox } from "antd"
-import { CSSProperties, useEffect, useState } from "react"
+import { CSSProperties, useEffect, useState, Dispatch, SetStateAction } from "react"
 import { AiOutlineReload } from "react-icons/ai"
 import { BsFileEarmarkCheck } from "react-icons/bs"
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi"
@@ -7,12 +7,12 @@ import { GoFileCode } from "react-icons/go"
 import { SiGoland } from "react-icons/si"
 import { VscVscode } from "react-icons/vsc"
 import { ProgressIcon } from "../../../support/components/icon/ProgressIcon"
+import { TraceExplorer, TraceExplorerProps } from "../../../trace/TraceExplorer"
 import TextEditor from "../../TextEditor"
 import CopyClipboard from "../../support/CopyClipboard"
 import Icon from "../../support/Icon"
 import { TestingItem } from "../testing-api"
-import { RunStatus } from "../testing"
-import { TraceExplorer, TraceExplorerProps } from "../../../trace/TraceExplorer"
+import { CoverageLine, CoverageLineProps } from "./Coverage"
 
 export interface XgoTestDetailProps {
     style?: CSSProperties
@@ -23,7 +23,7 @@ export interface XgoTestDetailProps {
     log?: string
 
     trace?: boolean
-    onTraceChange?: React.Dispatch<React.SetStateAction<boolean>>
+    onTraceChange?: Dispatch<SetStateAction<boolean>>
 
     onClickRun?: () => void
     onClickDebug?: () => void
@@ -37,23 +37,18 @@ export interface XgoTestDetailProps {
 
     showTrace?: boolean
     shownTraceProps?: TraceExplorerProps
+
+    coverage?: CoverageLineProps
 }
 
 // debug with trace enabled
 export function XgoTestDetail(props: XgoTestDetailProps) {
     return <div className={props.className} style={{ height: "100%", ...props.style }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
+            <CoverageLine {...props.coverage} />
+        </div>
         <ItemDetail {...props} />
     </div>
-}
-
-function getStatusColor(status: RunStatus): string | undefined {
-    if (status == "fail" || status === "error") {
-        return "red"
-    }
-    if (status === "success") {
-        return "green"
-    }
-    return undefined
 }
 
 export function ItemDetail(props: XgoTestDetailProps) {

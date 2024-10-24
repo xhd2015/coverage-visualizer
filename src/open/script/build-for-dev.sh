@@ -2,7 +2,7 @@
 set -eo pipefail
 
 (
-    npm run serve-open
+    PORT=$SERVE_PORT npm run serve-open
 ) &
 pid=$?
 

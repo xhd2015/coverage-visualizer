@@ -5,6 +5,7 @@ import { Options, RunItem, Session, SessionRunner, UpdateCallback } from "../Tes
 import { traverse } from "../../tree"
 import { ItemPath } from "../../List"
 import { CallRecord } from "../TestingExplorerEditor/TraceList/trace-types"
+import { CoverageData, CoverageLineProps } from "./Coverage"
 
 export async function requestPoll(url: string, pollURL: string, body: any, callback: (err: Error, events: ItemEvent[]) => boolean): Promise<void> {
     const resp = await fetch(url, {
@@ -140,13 +141,44 @@ export function useUrlData(url: string): { data: TestingItem, refresh: () => voi
         const rootData = makeSingleRoot(data)
         fillKeys(rootData)
         setData(rootData)
-
     }
+
     useMemo(() => {
         refresh()
     }, [])
 
     return { data, refresh }
+}
+
+export function useUrlCoverage(url: string): { data: CoverageData, loading: boolean, refresh: () => void } {
+    const [data, setData] = useState<CoverageData>()
+    const [loading, setLoading] = useState(false)
+
+    const refresh = async () => {
+        setLoading(true)
+        try {
+            const resp = await fetch(url)
+            const data: CoverageData = await resp.json()
+            setData(data)
+            if (false) {
+                // demo
+                await new Promise(r => setTimeout(r, 1000))
+                setData({
+                    total: { value: "0.4", pass: true },
+                    incremental: { value: "0.9", pass: true },
+                    link: "/coverage",
+                })
+            }
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        refresh()
+    }, [])
+
+    return { data, loading, refresh }
 }
 
 function fillKeys(data: TestingItem) {

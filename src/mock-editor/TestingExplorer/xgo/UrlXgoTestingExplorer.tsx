@@ -5,7 +5,7 @@ import { patchSubStree, updateState, updateSubTree } from "../TestingList/util"
 import { RunStatus } from "../testing"
 import { TestingItem } from "../testing-api"
 import { XgoTestingExplorer, XgoTestingExplorerProps } from "./XgoTestingExplorer"
-import { Event, fetchContent, requestRunPoll, useUrlData } from "./http-data"
+import { Event, fetchContent, requestRunPoll, useUrlCoverage, useUrlData } from "./http-data"
 import { filterData, replaceDataMergingState, setSelect, toggleExpand } from "./util"
 import { TraceItem } from "../TestingExplorerEditor/types"
 
@@ -23,6 +23,7 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
 
     // TODO: make list return single list
     const { data: serverData, refresh } = useUrlData(`${apiPrefix}/list`)
+    const { data: coverageData, loading: coverageLoading, refresh: refreshCoverage } = useUrlCoverage(`${apiPrefix}/coverage/summary`)
 
     const [data, setData] = useState(serverData)
     const [trace, setTrace] = useState(false)
@@ -44,7 +45,8 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         await fetch(url + "?" + params)
     }
 
-    return <XgoTestingExplorer {...props}
+    return <XgoTestingExplorer
+        {...props}
         data={data}
         onRefreshRoot={refresh}
         onClickItem={(item, path) => {
@@ -86,6 +88,11 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
         onTraceChange={setTrace}
         selectedTraceRecord={selectedTraceRecord}
         setSelectedTraceRecord={setSelectedTraceRecord}
+        coverage={{
+            data: { ...coverageData, link: coverageData?.link || "/coverage" },
+            fetching: coverageLoading,
+            onClickFetch: refreshCoverage,
+        }}
     />
 }
 

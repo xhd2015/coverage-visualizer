@@ -1,10 +1,13 @@
 # Workflow
 1. Development
- - command: `npm run dev-open`
+ - command: `npm install --legacy-peer-deps`
+ - command: `SERVE_PORT=8080 npm run dev-open`
  - serving files under src/open, so you can import js files via `http://localhost:8080/build/index.js`
 
 2. Verify
  - make your index.html refer to `http://localhost:8080/build/index.js`
+ - you can refer to [./demo-web.html](demo-web.html) for simple usage
+ - for xgo, refer to [xgo/test-explorer/index.html](https://github.com/xhd2015/xgo/blob/master/cmd/xgo/test-explorer/index.html)
 
 3. Build
  - Once development and verify complete, can proceed to next steps
@@ -14,17 +17,19 @@
 
 4. Publish
  - run: `cd src/open/npm-publish && npm publish`
+ - reference via: `https://cdn.jsdelivr.net/npm/xgo-explorer@0.0.13/index.js`
 
 # Usage
 Build
 ```sh
 npx webpack --watch --config src/open/webpack.config.js --progress --mode=development
+# this will 
 ```
 
 Serve file:
 ```sh
 npm install -g http-server
-http-server -c-1 ./
+http-server -c-1 --port 8080 '--cors=*' ./
 ```
 
 Open file:
