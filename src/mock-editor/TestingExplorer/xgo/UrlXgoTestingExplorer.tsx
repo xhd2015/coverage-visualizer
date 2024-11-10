@@ -26,7 +26,9 @@ export function UrlXgoTestingExplorer(props: UrlXgoTestingExplorerProps) {
     const { data: coverageData, loading: coverageLoading, refresh: refreshCoverage } = useUrlCoverage(`${apiPrefix}/coverage/summary`)
 
     const [data, setData] = useState(serverData)
-    const [trace, setTrace] = useState(false)
+
+    // enable trace by default
+    const [trace, setTrace] = useState(true)
     const [selectedTraceRecord, setSelectedTraceRecord] = useState<TraceItem>()
 
     useEffect(() => setData(prev => {

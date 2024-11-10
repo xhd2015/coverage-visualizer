@@ -16,8 +16,8 @@
  - this command will generate  `src/open/npm-publish` and other resources
 
 4. Publish
- - run: `cd src/open/npm-publish && npm publish`
- - reference via: `https://cdn.jsdelivr.net/npm/xgo-explorer@0.0.13/index.js`
+ - run: `(cd src/open/npm-publish && npm publish)`
+ - reference via: `https://cdn.jsdelivr.net/npm/xgo-explorer@0.0.14/index.js`
 
 # Usage
 Build
