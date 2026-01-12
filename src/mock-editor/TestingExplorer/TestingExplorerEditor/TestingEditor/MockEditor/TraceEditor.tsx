@@ -18,7 +18,7 @@ import TextEditor from "../../../../TextEditor";
 import { SchemaResult } from "../../../testing";
 import { CallRecord } from "../../TraceList/trace-types";
 import { TraceItem, MockEditData, MockType, MockMode, RespEditorOption } from "../../types";
-import { prettyJSONObjectSafe } from "@fultonjs/common/lib/code"
+import { prettyJSONObjectSafe } from "../../../../util/json"
 
 export interface TraceEditorControl {
     layoutEditors: () => void

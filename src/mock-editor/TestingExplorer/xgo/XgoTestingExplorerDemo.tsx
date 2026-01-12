@@ -3,8 +3,9 @@ import { ItemPath, isSamePath } from "../../List"
 import { StatusFilter } from "../TestingList/TestingListWithToolbar"
 import { findDataPath, updateData, updateState } from "../TestingList/util"
 import { TestingItem } from "../testing-api"
-import { UrlXgoTestingExplorer, XgoTestingExplorer, XgoTestingExplorerProps } from "./XgoTestingExplorer"
+import { XgoTestingExplorer, XgoTestingExplorerProps } from "./XgoTestingExplorer"
 import { filterData, setSelect, toggleExpand } from "./util"
+import { UrlXgoTestingExplorer } from "./UrlXgoTestingExplorer"
 
 export interface XgoTestingExplorerDemoProps extends XgoTestingExplorerProps {
 }

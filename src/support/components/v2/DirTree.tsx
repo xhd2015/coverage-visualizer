@@ -6,7 +6,7 @@ import {
     FileTemplate,
 } from "../../monaco-tree";
 
-import MonacoTree from "../../monaco-tree/monaco-tree";
+import { MonacoTree } from "../../monaco-tree/monaco-tree";
 import { MTreeNode } from "../../monaco-tree/tree-node";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
 import { deepClone, FileDetailGetter, ITreeNode, traverseNode } from "../../support/file";

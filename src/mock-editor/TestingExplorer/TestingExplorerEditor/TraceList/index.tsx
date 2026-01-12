@@ -58,7 +58,6 @@ export default function (props: TraceListProps) {
     const [showErrOnly, setShowErrOnly] = useState(false)
     const [showMockOnly, setShowMockOnly] = useState(false)
 
-
     const debugKey = false
     let versionRef = useRef(0)
 
@@ -121,8 +120,6 @@ export default function (props: TraceListProps) {
     }, [initItems, showErrOnly, showMockOnly])
 
     // console.log("trace items after filtered:", versionRef.current, items)
-
-
 
     // clear selected if it disappear
     useEffect(() => {
